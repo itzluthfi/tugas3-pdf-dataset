@@ -852,6 +852,19 @@
             margin-top: auto;
             width: 100%;
         }
+
+        .query-history-bar a {
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .query-history-bar a:hover {
+            background: rgba(99, 102, 241, 0.2) !important;
+            border-color: var(--primary-light) !important;
+            color: var(--primary-light) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
         
     </style>
 </head>
@@ -881,6 +894,18 @@
                     </form>
                 </div>
             </div>
+            
+            <!-- Riwayat Pencarian -->
+            {% if query_history %}
+            <div class="query-history-bar" style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 680px; width: 100%; z-index: 50;">
+                <span style="color: var(--text-muted); font-size: 0.82rem; font-weight: 500; display: inline-flex; align-items: center; margin-right: 4px;">Riwayat Pencarian:</span>
+                {% for hist_q in query_history %}
+                <a href="/?query={{ hist_q|urlencode }}" style="background: rgba(22, 28, 45, 0.5); color: var(--text-main); font-size: 0.8rem; padding: 6px 14px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, 0.05); text-decoration: none; white-space: nowrap;">
+                    {{ hist_q }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
             
             {% if not searched %}
                 <div style="margin-top: 40px; color: var(--text-muted); font-size: 0.95rem; display: flex; gap: 15px;">
@@ -1009,36 +1034,46 @@
             {% if has_ground_truth %}
             <!-- Card Evaluasi Performa Model -->
             <div class="evaluation-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; box-shadow: var(--shadow-sm); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
-                <h3 style="font-size: 1.25rem; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
-                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                    Performance Evaluation
-                </h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="font-size: 1.25rem; color: var(--text-main); display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                        <span id="evaluation-card-title">Evaluasi Performa (Query Aktif)</span>
+                    </h3>
+                    <div style="display: inline-flex; background: rgba(11, 15, 25, 0.6); border: 1px solid var(--card-border); border-radius: 8px; padding: 3px;">
+                        <button type="button" id="toggle-eval-single" onclick="setEvaluationMode('single')" style="background: var(--primary); color: white; border: none; padding: 6px 14px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                            Query Aktif
+                        </button>
+                        <button type="button" id="toggle-eval-global" onclick="setEvaluationMode('global')" style="background: transparent; color: var(--text-muted); border: none; padding: 6px 14px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                            Evaluasi Sistem (Multi-Query)
+                        </button>
+                    </div>
+                </div>
                 <div class="training-scroll compact">
                     <table class="epoch-table" style="background: rgba(17, 24, 39, 0.4);">
                         <thead>
                             <tr>
-                                <th>Method</th>
-                                <th>Top-1 Accuracy</th>
-                                <th>Precision (k=5)</th>
+                                <th>Metode</th>
+                                <th>Top-1 Akurasi</th>
+                                <th>Presisi (k=5)</th>
                                 <th>Recall (k=5)</th>
                                 <th>F1-Score (k=5)</th>
                                 <th>MAP</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for method, m in [
-                                ('CBOW', eval_metrics.get('cbow', {})),
-                                ('FastText', eval_metrics.get('ft', {})),
-                                ('Skip-Gram', eval_metrics.get('sg', {})),
-                                ('TF-IDF', eval_metrics.get('tfidf', {}))
+                            {% for method_key, method_name, m in [
+                                ('cbow', 'CBOW', eval_metrics.get('cbow', {})),
+                                ('ft', 'FastText', eval_metrics.get('ft', {})),
+                                ('sg', 'Skip-Gram', eval_metrics.get('sg', {})),
+                                ('tfidf', 'TF-IDF', eval_metrics.get('tfidf', {}))
                             ] %}
                             <tr>
-                                <td><strong>{{ method }}</strong></td>
-                                <td>{{ "%.4f"|format(m.top1_accuracy) if (m and m.top1_accuracy is not none) else '0.0000' }}</td>
-                                <td>{{ "%.4f"|format(m.precision) if (m and m.precision is not none) else '0.0000' }}</td>
-                                <td>{{ "%.4f"|format(m.recall) if (m and m.recall is not none) else '0.0000' }}</td>
-                                <td>{{ "%.4f"|format(m.f1_score) if (m and m.f1_score is not none) else '0.0000' }}</td>
-                                <td>{{ "%.4f"|format(m.map) if (m and m.map is not none) else '0.0000' }}</td>
+                                <td><strong>{{ method_name }}</strong></td>
+                                <td id="cell-{{ method_key }}-acc">{{ "%.4f"|format(m.top1_accuracy) if (m and m.top1_accuracy is not none) else '0.0000' }}</td>
+                                <td id="cell-{{ method_key }}-prec">{{ "%.4f"|format(m.precision) if (m and m.precision is not none) else '0.0000' }}</td>
+                                <td id="cell-{{ method_key }}-rec">{{ "%.4f"|format(m.recall) if (m and m.recall is not none) else '0.0000' }}</td>
+                                <td id="cell-{{ method_key }}-f1">{{ "%.4f"|format(m.f1_score) if (m and m.f1_score is not none) else '0.0000' }}</td>
+                                <td id="cell-{{ method_key }}-map">{{ "%.4f"|format(m.map) if (m and m.map is not none) else '0.0000' }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -2048,6 +2083,161 @@
             }
         }
 
+        // Data evaluasi yang siap di-inject oleh Jinja2
+        const evalMetricsSingle = {
+            cbow: {
+                acc: {{ eval_metrics.cbow.top1_accuracy if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                prec: {{ eval_metrics.cbow.precision if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                rec: {{ eval_metrics.cbow.recall if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                f1: {{ eval_metrics.cbow.f1_score if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                map: {{ eval_metrics.cbow.map if (eval_metrics and eval_metrics.cbow) else 0.0 }}
+            },
+            ft: {
+                acc: {{ eval_metrics.ft.top1_accuracy if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                prec: {{ eval_metrics.ft.precision if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                rec: {{ eval_metrics.ft.recall if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                f1: {{ eval_metrics.ft.f1_score if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                map: {{ eval_metrics.ft.map if (eval_metrics and eval_metrics.ft) else 0.0 }}
+            },
+            sg: {
+                acc: {{ eval_metrics.sg.top1_accuracy if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                prec: {{ eval_metrics.sg.precision if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                rec: {{ eval_metrics.sg.recall if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                f1: {{ eval_metrics.sg.f1_score if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                map: {{ eval_metrics.sg.map if (eval_metrics and eval_metrics.sg) else 0.0 }}
+            },
+            tfidf: {
+                acc: {{ eval_metrics.tfidf.top1_accuracy if (eval_metrics and eval_metrics.tfidf) else 0.0 }},
+                prec: {{ eval_metrics.tfidf.precision if (eval_metrics and eval_metrics.tfidf) else 0.0 }},
+                rec: {{ eval_metrics.tfidf.recall if (eval_metrics and eval_metrics.tfidf) else 0.0 }},
+                f1: {{ eval_metrics.tfidf.f1_score if (eval_metrics and eval_metrics.tfidf) else 0.0 }},
+                map: {{ eval_metrics.tfidf.map if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            }
+        };
+
+        const evalMetricsGlobal = {
+            cbow: {
+                acc: {{ global_eval_metrics.cbow.top1_accuracy if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                prec: {{ global_eval_metrics.cbow.precision if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                rec: {{ global_eval_metrics.cbow.recall if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                f1: {{ global_eval_metrics.cbow.f1_score if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                map: {{ global_eval_metrics.cbow.map if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }}
+            },
+            ft: {
+                acc: {{ global_eval_metrics.ft.top1_accuracy if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                prec: {{ global_eval_metrics.ft.precision if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                rec: {{ global_eval_metrics.ft.recall if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                f1: {{ global_eval_metrics.ft.f1_score if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                map: {{ global_eval_metrics.ft.map if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }}
+            },
+            sg: {
+                acc: {{ global_eval_metrics.sg.top1_accuracy if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                prec: {{ global_eval_metrics.sg.precision if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                rec: {{ global_eval_metrics.sg.recall if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                f1: {{ global_eval_metrics.sg.f1_score if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                map: {{ global_eval_metrics.sg.map if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }}
+            },
+            tfidf: {
+                acc: {{ global_eval_metrics.tfidf.top1_accuracy if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                prec: {{ global_eval_metrics.tfidf.precision if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                rec: {{ global_eval_metrics.tfidf.recall if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                f1: {{ global_eval_metrics.tfidf.f1_score if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                map: {{ global_eval_metrics.tfidf.map if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }}
+            }
+        };
+
+        // References for Chart.js instances so they can be updated dynamically
+        let f1ChartInstance = null;
+        const miniCharts = {};
+
+        function setEvaluationMode(mode) {
+            const btnSingle = document.getElementById('toggle-eval-single');
+            const btnGlobal = document.getElementById('toggle-eval-global');
+            const titleSpan = document.getElementById('evaluation-card-title');
+            
+            if (mode === 'single') {
+                if (btnSingle) {
+                    btnSingle.style.background = 'var(--primary)';
+                    btnSingle.style.color = 'white';
+                }
+                if (btnGlobal) {
+                    btnGlobal.style.background = 'transparent';
+                    btnGlobal.style.color = 'var(--text-muted)';
+                }
+                if (titleSpan) {
+                    titleSpan.innerText = 'Evaluasi Performa (Query Aktif)';
+                }
+                updateMetricsUI(evalMetricsSingle);
+            } else {
+                if (btnSingle) {
+                    btnSingle.style.background = 'transparent';
+                    btnSingle.style.color = 'var(--text-muted)';
+                }
+                if (btnGlobal) {
+                    btnGlobal.style.background = 'var(--primary)';
+                    btnGlobal.style.color = 'white';
+                }
+                if (titleSpan) {
+                    titleSpan.innerText = 'Evaluasi Performa (Sistem / Multi-Query)';
+                }
+                updateMetricsUI(evalMetricsGlobal);
+            }
+        }
+
+        function updateMetricsUI(metrics) {
+            const methods = ['cbow', 'ft', 'sg', 'tfidf'];
+            const keys = ['acc', 'prec', 'rec', 'f1', 'map'];
+            
+            // Update table cells
+            methods.forEach(m => {
+                keys.forEach(k => {
+                    const el = document.getElementById(`cell-${m}-${k}`);
+                    if (el && metrics[m]) {
+                        el.innerText = Number(metrics[m][k]).toFixed(4);
+                    }
+                });
+            });
+            
+            // Update F1 Score Chart
+            if (f1ChartInstance) {
+                f1ChartInstance.data.datasets[0].data = [
+                    metrics.cbow.f1,
+                    metrics.ft.f1,
+                    metrics.sg.f1,
+                    metrics.tfidf.f1
+                ];
+                f1ChartInstance.data.datasets[1].data = [
+                    metrics.cbow.map,
+                    metrics.ft.map,
+                    metrics.sg.map,
+                    metrics.tfidf.map
+                ];
+                f1ChartInstance.update();
+            }
+            
+            // Update Mini Charts
+            const miniMapping = {
+                'smallChart_acc': 'acc',
+                'smallChart_prec': 'prec',
+                'smallChart_rec': 'rec',
+                'smallChart_f1': 'f1'
+            };
+            
+            Object.keys(miniMapping).forEach(chartId => {
+                const metricKey = miniMapping[chartId];
+                const chartObj = miniCharts[chartId];
+                if (chartObj) {
+                    chartObj.data.datasets[0].data = [
+                        metrics.cbow[metricKey],
+                        metrics.ft[metricKey],
+                        metrics.sg[metricKey],
+                        metrics.tfidf[metricKey]
+                    ];
+                    chartObj.update();
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             toggleImplementationMode();
             const cards = document.querySelectorAll('.result-card');
@@ -2055,12 +2245,11 @@
                 card.style.animation = `elegantFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards ${index * 0.08}s`;
             });
 
-                        // Data untuk Chart.js
             // Chart.js - F1-Score Chart
             const f1Canvas = document.getElementById('f1ScoreChart');
             if (f1Canvas) {
                 const f1Ctx = f1Canvas.getContext('2d');
-                new Chart(f1Ctx, {
+                f1ChartInstance = new Chart(f1Ctx, {
                     data: {
                         labels: ['CBOW', 'FastText', 'Skip-Gram', 'TF-IDF'],
                         datasets: [
@@ -2068,10 +2257,10 @@
                                 type: 'bar',
                                 label: 'F1-Score',
                                 data: [
-                                    {{ eval_metrics.cbow.f1_score if (eval_metrics and eval_metrics.cbow) else 0.0 }},
-                                    {{ eval_metrics.ft.f1_score if (eval_metrics and eval_metrics.ft) else 0.0 }},
-                                    {{ eval_metrics.sg.f1_score if (eval_metrics and eval_metrics.sg) else 0.0 }},
-                                    {{ eval_metrics.tfidf.f1_score if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+                                    evalMetricsSingle.cbow.f1,
+                                    evalMetricsSingle.ft.f1,
+                                    evalMetricsSingle.sg.f1,
+                                    evalMetricsSingle.tfidf.f1
                                 ],
                                 backgroundColor: [
                                     'rgba(251, 191, 36, 0.6)',
@@ -2092,10 +2281,10 @@
                                 type: 'line',
                                 label: 'MAP',
                                 data: [
-                                    {{ eval_metrics.cbow.map if (eval_metrics and eval_metrics.cbow) else 0.0 }},
-                                    {{ eval_metrics.ft.map if (eval_metrics and eval_metrics.ft) else 0.0 }},
-                                    {{ eval_metrics.sg.map if (eval_metrics and eval_metrics.sg) else 0.0 }},
-                                    {{ eval_metrics.tfidf.map if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+                                    evalMetricsSingle.cbow.map,
+                                    evalMetricsSingle.ft.map,
+                                    evalMetricsSingle.sg.map,
+                                    evalMetricsSingle.tfidf.map
                                 ],
                                 borderColor: '#f43f5e',
                                 backgroundColor: 'rgba(244, 63, 94, 0.1)',
@@ -2222,9 +2411,9 @@
             // Small Helper function to create mini charts
             function createMiniChart(elementId, labelText, dataArr, borderColors, bgColors) {
                 const canvas = document.getElementById(elementId);
-                if (!canvas) return;
+                if (!canvas) return null;
                 const ctx = canvas.getContext('2d');
-                new Chart(ctx, {
+                return new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: ['CBOW', 'FT', 'SG', 'TF'],
@@ -2253,32 +2442,32 @@
             const bgColors = ['rgba(251, 191, 36, 0.6)', 'rgba(236, 72, 153, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(99, 102, 241, 0.6)'];
             const borderColors = ['#fbbf24', '#ec4899', '#34d399', '#818cf8'];
 
-            createMiniChart('smallChart_acc', 'Accuracy', [
-                {{ eval_metrics.cbow.top1_accuracy if (eval_metrics and eval_metrics.cbow) else 0.0 }},
-                {{ eval_metrics.ft.top1_accuracy if (eval_metrics and eval_metrics.ft) else 0.0 }},
-                {{ eval_metrics.sg.top1_accuracy if (eval_metrics and eval_metrics.sg) else 0.0 }},
-                {{ eval_metrics.tfidf.top1_accuracy if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            miniCharts['smallChart_acc'] = createMiniChart('smallChart_acc', 'Accuracy', [
+                evalMetricsSingle.cbow.acc,
+                evalMetricsSingle.ft.acc,
+                evalMetricsSingle.sg.acc,
+                evalMetricsSingle.tfidf.acc
             ], borderColors, bgColors);
 
-            createMiniChart('smallChart_prec', 'Precision', [
-                {{ eval_metrics.cbow.precision if (eval_metrics and eval_metrics.cbow) else 0.0 }},
-                {{ eval_metrics.ft.precision if (eval_metrics and eval_metrics.ft) else 0.0 }},
-                {{ eval_metrics.sg.precision if (eval_metrics and eval_metrics.sg) else 0.0 }},
-                {{ eval_metrics.tfidf.precision if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            miniCharts['smallChart_prec'] = createMiniChart('smallChart_prec', 'Precision', [
+                evalMetricsSingle.cbow.prec,
+                evalMetricsSingle.ft.prec,
+                evalMetricsSingle.sg.prec,
+                evalMetricsSingle.tfidf.prec
             ], borderColors, bgColors);
 
-            createMiniChart('smallChart_rec', 'Recall', [
-                {{ eval_metrics.cbow.recall if (eval_metrics and eval_metrics.cbow) else 0.0 }},
-                {{ eval_metrics.ft.recall if (eval_metrics and eval_metrics.ft) else 0.0 }},
-                {{ eval_metrics.sg.recall if (eval_metrics and eval_metrics.sg) else 0.0 }},
-                {{ eval_metrics.tfidf.recall if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            miniCharts['smallChart_rec'] = createMiniChart('smallChart_rec', 'Recall', [
+                evalMetricsSingle.cbow.rec,
+                evalMetricsSingle.ft.rec,
+                evalMetricsSingle.sg.rec,
+                evalMetricsSingle.tfidf.rec
             ], borderColors, bgColors);
 
-            createMiniChart('smallChart_f1', 'F1 Score', [
-                {{ eval_metrics.cbow.f1_score if (eval_metrics and eval_metrics.cbow) else 0.0 }},
-                {{ eval_metrics.ft.f1_score if (eval_metrics and eval_metrics.ft) else 0.0 }},
-                {{ eval_metrics.sg.f1_score if (eval_metrics and eval_metrics.sg) else 0.0 }},
-                {{ eval_metrics.tfidf.f1_score if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            miniCharts['smallChart_f1'] = createMiniChart('smallChart_f1', 'F1 Score', [
+                evalMetricsSingle.cbow.f1,
+                evalMetricsSingle.ft.f1,
+                evalMetricsSingle.sg.f1,
+                evalMetricsSingle.tfidf.f1
             ], borderColors, bgColors);
         });
     </script>

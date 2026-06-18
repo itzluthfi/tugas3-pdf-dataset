@@ -866,6 +866,137 @@ class IRSystem:
             'rows': rows,
         }
 
+    def _calculate_metrics(self, retrieved_list, ground_truth):
+        if not ground_truth:
+            return {
+                'top1_accuracy': 0.0,
+                'precision': 0.0,
+                'recall': 0.0,
+                'f1_score': 0.0,
+                'map': 0.0
+            }
+        
+        gt_set = set(ground_truth)
+        
+        # Top-1 Accuracy
+        top1_accuracy = 1.0 if retrieved_list and retrieved_list[0] in gt_set else 0.0
+        
+        # Precision@5
+        top_5 = retrieved_list[:5]
+        relevant_retrieved = [doc for doc in top_5 if doc in gt_set]
+        precision = len(relevant_retrieved) / 5.0
+        
+        # Recall@5
+        recall = len(relevant_retrieved) / len(gt_set)
+        
+        # F1-Score
+        if precision + recall > 0:
+            f1_score = (2.0 * precision * recall) / (precision + recall)
+        else:
+            f1_score = 0.0
+            
+        # MAP
+        ap = 0.0
+        relevant_count = 0
+        for k, doc in enumerate(retrieved_list):
+            if doc in gt_set:
+                relevant_count += 1
+                precision_at_k = relevant_count / (k + 1)
+                ap += precision_at_k
+        ap = ap / len(gt_set) if len(gt_set) > 0 else 0.0
+        
+        return {
+            'top1_accuracy': top1_accuracy,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1_score,
+            'map': ap
+        }
+
+    def evaluate_global_benchmark(self) -> Dict[str, Any]:
+        gt_file = os.path.join("storage", "ground_truth.json")
+        if not os.path.exists(gt_file):
+            return {}
+            
+        try:
+            with open(gt_file, "r") as f:
+                gt_data = json.load(f)
+        except Exception:
+            return {}
+            
+        if not gt_data:
+            return {}
+            
+        models = ['tfidf', 'sg', 'cbow', 'ft']
+        sums = {m: {'top1_accuracy': 0.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'map': 0.0} for m in models}
+        
+        query_count = 0
+        for query, gt_docs in gt_data.items():
+            if not gt_docs:
+                continue
+            query_count += 1
+            
+            # Run search silently
+            res = self.search(query)
+            
+            # Retrieve documents
+            tfidf_retrieved = [r['filename'] for r in res['results']]
+            sg_retrieved = [r['filename'] for r in res['sg_results']]
+            cbow_retrieved = [r['filename'] for r in res['cbow_results']]
+            ft_retrieved = [r['filename'] for r in res['ft_results']]
+            
+            # Calculate metrics
+            metrics = {
+                'tfidf': self._calculate_metrics(tfidf_retrieved, gt_docs),
+                'sg': self._calculate_metrics(sg_retrieved, gt_docs),
+                'cbow': self._calculate_metrics(cbow_retrieved, gt_docs),
+                'ft': self._calculate_metrics(ft_retrieved, gt_docs)
+            }
+            
+            # Sum up
+            for m in models:
+                for metric in sums[m]:
+                    sums[m][metric] += metrics[m][metric]
+                    
+        if query_count == 0:
+            return {}
+            
+        averages = {}
+        for m in models:
+            averages[m] = {}
+            for metric in sums[m]:
+                averages[m][metric] = round(sums[m][metric] / query_count, 4)
+                
+        return averages
+
+    def load_query_history(self) -> List[str]:
+        history_file = os.path.join("storage", "query_history.json")
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, "r") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return []
+
+    def add_to_query_history(self, query: str):
+        query = query.strip()
+        if not query:
+            return
+        history = self.load_query_history()
+        if query in history:
+            history.remove(query)
+        history.insert(0, query)
+        history = history[:10]  # Limit to 10 items
+        
+        os.makedirs("storage", exist_ok=True)
+        history_file = os.path.join("storage", "query_history.json")
+        try:
+            with open(history_file, "w") as f:
+                json.dump(history, f, indent=4)
+        except Exception as e:
+            print(f"Error saving query history: {e}")
+
 
 # Testing langsung jika file ini dijalankan
 if __name__ == "__main__":

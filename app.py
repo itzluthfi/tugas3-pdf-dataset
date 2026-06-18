@@ -96,8 +96,13 @@ def index():
         'versions': ir_system.list_versions(),
         'ground_truth_docs': [],
         'has_ground_truth': False,
-        'eval_metrics': {}
+        'eval_metrics': {},
+        'global_eval_metrics': {},
+        'query_history': []
     }
+
+    # Load riwayat pencarian awal
+    data['query_history'] = ir_system.load_query_history()
 
     query = ""
     if request.method == "POST":
@@ -108,6 +113,10 @@ def index():
     if query:
         data['query'] = query
         data['searched'] = True
+
+        # Tambahkan kata kunci ke riwayat
+        ir_system.add_to_query_history(query)
+        data['query_history'] = ir_system.load_query_history()
 
         # Jalankan pencarian
         search_result = ir_system.search(query)
@@ -159,6 +168,9 @@ def index():
             'cbow': calculate_metrics(cbow_retrieved, gt_set),
             'ft': calculate_metrics(ft_retrieved, gt_set)
         }
+
+        # Hitung metrik evaluasi global multi-query
+        data['global_eval_metrics'] = ir_system.evaluate_global_benchmark()
 
     return render_template("index.html", **data)
 
