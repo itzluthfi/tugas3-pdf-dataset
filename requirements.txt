@@ -1,0 +1,7 @@
+Flask
+scikit-learn
+PyPDF2
+PySastrawi
+nltk
+python-pptx
+gensim

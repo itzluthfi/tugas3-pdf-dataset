@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantika - Penelusuran Dokumen Premium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 28, 45, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.35);
+            --accent: #8b5cf6;
+            --input-bg: #1e293b;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0, transparent 40%), 
+                radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.06) 0, transparent 40%), 
+                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.04) 0, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Glow behind search */
+        .ambient-glow {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.05) 50%, rgba(11, 15, 25, 0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Container & Alignment */
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* Navbar / Header state */
+        .header-container {
+            width: 100%;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .header-container.initial {
+            justify-content: center;
+            padding: 20px;
+            margin-top: 22vh;
+        }
+
+        .header-container.active {
+            padding: 20px 30px;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            flex-direction: row;
+            justify-content: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-logo {
+            font-size: 4.5rem;
+            font-weight: 700;
+            font-family: 'Playfair Display', Georgia, serif;
+            color: #ffffff;
+            margin-bottom: 35px;
+            letter-spacing: -1px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .header-container.active .brand-logo {
+            font-size: 2rem;
+            font-family: 'Playfair Display', Georgia, serif;
+            color: #ffffff;
+            margin-bottom: 0;
+            margin-right: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        /* Search Form */
+        .search-form {
+            width: 100%;
+            max-width: 680px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .header-container.active .search-form {
+            max-width: 750px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 2px solid transparent;
+            border-radius: 999px;
+            padding: 16px 24px 16px 56px;
+            font-size: 1.1rem;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            color: var(--text-main);
+            background-clip: padding-box;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+            padding: 2px;
+            transition: all 0.3s;
+        }
+
+        .search-input-wrapper:hover {
+            background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-1px);
+        }
+
+        .search-input-wrapper:focus-within {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .header-container.active .search-input {
+            padding: 12px 24px 12px 50px;
+            font-size: 1.05rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+
+        .header-container.active .search-icon {
+            left: 20px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .search-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .search-input-wrapper:focus-within .search-icon svg {
+            stroke: var(--primary-light);
+        }
+
+        .search-submit {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 999px;
+            padding: 10px 24px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.3);
+        }
+
+        .header-container.active .search-submit {
+            padding: 8px 20px;
+            font-size: 0.95rem;
+        }
+
+        .search-submit:hover {
+            filter: brightness(1.1);
+            transform: translateY(-50%) scale(1.02);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+        }
+        
+        .search-submit:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        /* Version Management Panel */
+        .version-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 26px;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px;
+        }
+
+        .panel-header h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .active-version-badge {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-left: 5px;
+            display: inline-block;
+        }
+
+        .panel-icon {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: var(--primary-light);
+            stroke-width: 2;
+        }
+
+        .panel-body {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .panel-body {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 30px;
+            }
+            .control-group {
+                flex: 1.2;
+            }
+            .train-form {
+                flex: 1.5;
+            }
+            .divider {
+                width: 1px;
+                align-self: stretch;
+                background: rgba(255, 255, 255, 0.08);
+                display: block;
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .inline-form {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .inline-form label, .train-form label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .select-wrapper select {
+            width: 100%;
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.95rem;
+            appearance: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .select-wrapper select:hover, .select-wrapper select:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+        }
+
+        .select-wrapper::after {
+            content: "▼";
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 16px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+        }
+
+        .btn-download:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--secondary);
+        }
+
+        .btn-download svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+        }
+        
+        .btn-download:hover svg {
+            stroke: var(--secondary);
+        }
+
+        .train-form {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .input-group input {
+            flex: 1;
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-train {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-train:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-train svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        /* Main Content Results */
+        .results-wrapper {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 20px 60px;
+            opacity: 0;
+            animation: elegantFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+            position: relative;
+        }
+
+        @keyframes elegantFadeIn {
+            0% { opacity: 0; transform: translateY(15px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .stats-ribbon {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            margin-bottom: 25px;
+            padding: 12px 18px;
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.18);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-ribbon svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: var(--primary-light);
+            stroke-width: 2;
+            flex-shrink: 0;
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .result-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 24px;
+            bottom: 24px;
+            width: 4px;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 0 4px 4px 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .result-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        .result-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-icon {
+            width: 28px;
+            height: 28px;
+            background: rgba(239, 68, 68, 0.12);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .card-icon svg {
+            width: 16px;
+            height: 16px;
+            fill: #ef4444;
+        }
+
+        .card-path {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .card-path:hover {
+            color: var(--text-main);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-main);
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 12px;
+            line-height: 1.3;
+            transition: color 0.15s ease;
+        }
+
+        .card-title:hover {
+            color: var(--primary-light);
+            text-decoration: underline;
+        }
+
+        .card-snippet {
+            color: #cbd5e1;
+            font-size: 1rem;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        .card-snippet mark {
+            background: rgba(245, 158, 11, 0.18);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            padding: 2px 6.5px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-shadow: 0 0 6px rgba(245, 158, 11, 0.35);
+            transition: all 0.2s ease;
+        }
+
+        .card-snippet mark.exact-match {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            text-shadow: 0 0 6px rgba(16, 185, 129, 0.35);
+        }
+
+        .card-snippet mark.exact-match:hover {
+            background: rgba(16, 185, 129, 0.25);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+
+        .card-snippet mark.semantic-match {
+            background: rgba(139, 92, 246, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            text-shadow: 0 0 6px rgba(139, 92, 246, 0.35);
+            cursor: help;
+            border-bottom: 1px dashed rgba(139, 92, 246, 0.7);
+        }
+
+        .card-snippet mark.semantic-match:hover {
+            background: rgba(139, 92, 246, 0.25);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
+
+
+        .score-comparison {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .score-pill {
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .score-pill.tfidf {
+            color: #818cf8;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+        }
+
+        .score-pill.sg {
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        .score-pill.cbow {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.12);
+            border: 1px solid rgba(251, 191, 36, 0.35);
+        }
+
+        .training-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 26px;
+            box-shadow: var(--shadow-sm);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .training-panel h2 {
+            font-size: 1.15rem;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .training-panel p {
+            color: var(--text-muted);
+            line-height: 1.55;
+            margin-bottom: 16px;
+        }
+
+        .training-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .training-stat {
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .training-stat strong {
+            display: block;
+            color: var(--text-main);
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+
+        .training-stat span {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        .training-subtitle {
+            color: var(--text-main);
+            font-weight: 700;
+            margin: 16px 0 8px;
+        }
+
+        .pair-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .pair-chip {
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 999px;
+            color: var(--primary-light);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 6px 10px;
+        }
+
+        .training-scroll {
+            max-height: 320px;
+            overflow: auto;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            margin-bottom: 14px;
+            background: #0f172a;
+        }
+
+        .training-scroll.compact {
+            max-height: 220px;
+        }
+
+        .training-scroll.wide {
+            max-height: 380px;
+        }
+
+        .training-note {
+            color: var(--text-muted);
+            font-size: 0.84rem;
+            margin: -4px 0 10px;
+        }
+
+        .vector-cell {
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 0.78rem;
+            max-width: 360px;
+            white-space: nowrap;
+            overflow-x: auto;
+            color: #38bdf8;
+        }
+
+        .epoch-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .epoch-table th,
+        .epoch-table td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 9px 10px;
+            text-align: left;
+        }
+
+        .epoch-table th {
+            background: #111827;
+            color: var(--text-main);
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        /* Empty State */
+        .empty-view {
+            text-align: center;
+            padding: 80px 20px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: var(--shadow-sm);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: #111827;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .empty-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: #64748b;
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .footer-tag {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 30px;
+            margin-top: auto;
+            width: 100%;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <div class="page-wrapper">
+        <header class="header-container {% if searched %}active{% else %}initial{% endif %}">
+            <a href="/" class="brand-logo" style="text-decoration: none;">Semantika</a>
+            {% if not searched %}
+                <div class="brand-subtitle" style="color: var(--text-muted); font-size: 1.05rem; margin-top: -25px; margin-bottom: 30px; text-align: center; max-width: 600px; font-weight: 300; letter-spacing: 0.5px; opacity: 0.85;">
+                    Advanced Document Retrieval System Comparison Dashboard
+                </div>
+            {% endif %}
+            
+            <div class="search-form">
+                <div class="search-input-wrapper">
+                    <form method="POST" action="/" style="width: 100%; height: 100%; position: relative;">
+                        <div class="search-icon">
+                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                        
+                        <input type="text" name="query" class="search-input" placeholder="Temukan dokumen daerah yang Anda butuhkan..." value="{{ query }}" required autocomplete="off" autofocus>
+                        
+                        <button type="submit" class="search-submit">Cari</button>
+                    </form>
+                </div>
+            </div>
+            
+            {% if not searched %}
+                <div style="margin-top: 40px; color: var(--text-muted); font-size: 0.95rem; display: flex; gap: 15px;">
+                    <span style="background: rgba(22, 28, 45, 0.7); color: var(--text-main); padding: 8px 16px; border-radius: 99px; box-shadow: var(--shadow-sm); border: 1px solid var(--card-border); display: inline-flex; align-items: center;">
+                        <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: var(--primary-light); stroke-width: 2; margin-right: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                        10 Dokumen Provinsi
+                    </span>
+                </div>
+            {% endif %}
+        </header>
+
+        <!-- Version Management Panel -->
+        <div class="version-panel-container" style="width: 100%; display: flex; justify-content: center; padding: 0 20px; margin-top: {% if searched %}20px{% else %}40px{% endif %}; margin-bottom: {% if searched %}0px{% else %}40px{% endif %}; z-index: 50;">
+            <section class="version-panel">
+                <div class="panel-header">
+                    <svg viewBox="0 0 24 24" class="panel-icon"><path d="M12 22V12m0 0V2m0 10h10M12 12H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <h3>Manajemen Korpus & Model (Versi: <span class="active-version-badge">{{ current_version }}</span>)</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="control-group">
+                        <form action="/select_version" method="POST" class="inline-form">
+                            <label for="version_name">Pilih Versi Aktif:</label>
+                            <div class="select-wrapper">
+                                <select name="version_name" id="version_name" onchange="this.form.submit()">
+                                    {% for v in versions %}
+                                        <option value="{{ v.version_name }}" {% if v.version_name == current_version %}selected{% endif %}>
+                                            {{ v.version_name }} ({{ v.document_count }} PDF, Vocab: {{ v.vocabulary_size }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+                        
+                        <a href="/download_one_hot/{{ current_version }}" class="btn-download">
+                            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Unduh One-Hot Encoding (.json)
+                        </a>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <form action="/train_version" method="POST" class="train-form" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Buat Versi Baru (Train dari Awal):</label>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label for="new_version_name" style="font-size: 0.75rem; color: var(--text-muted);">Nama Versi:</label>
+                            <div class="input-group">
+                                <input type="text" name="version_name" id="new_version_name" placeholder="wisata_v2..." required pattern="[a-zA-Z0-9_\-]+" style="width: 100%; height: 38px;">
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label for="implementation_mode" style="font-size: 0.75rem; color: var(--text-muted);">Mode Implementasi:</label>
+                            <div class="select-wrapper">
+                                <select name="implementation_mode" id="implementation_mode" onchange="toggleImplementationMode()">
+                                    <option value="library" selected>Gensim Library (Rekomendasi - Cepat & Akurat)</option>
+                                    <option value="manual">Manual Python (Untuk Belajar Matematika)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px; width: 100%;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label for="train_window_size" style="font-size: 0.75rem; color: var(--text-muted);">Window:</label>
+                                <div class="input-group">
+                                    <input type="number" name="window_size" id="train_window_size" value="2" min="1" max="5" required style="width: 100%; height: 38px; text-align: center; padding: 5px;">
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label for="train_vector_size" style="font-size: 0.75rem; color: var(--text-muted);">Dimensi:</label>
+                                <div class="input-group">
+                                    <input type="number" name="vector_size" id="train_vector_size" value="10" min="2" max="100" required style="width: 100%; height: 38px; text-align: center; padding: 5px;">
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label for="train_epochs" style="font-size: 0.75rem; color: var(--text-muted);">Epochs:</label>
+                                <div class="input-group">
+                                    <input type="number" name="epochs" id="train_epochs" value="1" min="1" max="100" required style="width: 100%; height: 38px; text-align: center; padding: 5px;">
+                                </div>
+                            </div>
+                            <div id="max_pairs_container" style="display: none; flex-direction: column; gap: 4px;">
+                                <label for="train_max_pairs" style="font-size: 0.75rem; color: var(--text-muted);">Max Pairs:</label>
+                                <div class="input-group">
+                                    <input type="number" name="max_training_pairs" id="train_max_pairs" value="300" min="10" max="10000" required style="width: 100%; height: 38px; text-align: center; padding: 5px;">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-train" style="height: 40px; margin-top: 4px;">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px;"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Train & Simpan (Dual Model)
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        {% if searched %}
+        <main class="results-wrapper">
+            <div class="stats-ribbon" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 18px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: none; stroke: var(--primary-light); stroke-width: 2; flex-shrink: 0;"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>Menampilkan {{ relevant_count }} dokumen paling relevan &bull; membandingkan TF-IDF, Word2Vec Skip-gram, dan Word2Vec CBOW</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; font-size: 0.8rem; font-weight: 600;">
+                    <span style="display: inline-flex; align-items: center; gap: 5px; color: #34d399; background: rgba(16, 185, 129, 0.1); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <span style="width: 6px; height: 6px; background: #34d399; border-radius: 50%; display: inline-block;"></span>
+                        Cocok Persis
+                    </span>
+                    <span style="display: inline-flex; align-items: center; gap: 5px; color: #c084fc; background: rgba(139, 92, 246, 0.1); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.25);">
+                        <span style="width: 6px; height: 6px; background: #c084fc; border-radius: 50%; display: inline-block;"></span>
+                        Semantik
+                    </span>
+                </div>
+            </div>
+
+            {% if autocorrected_query %}
+            <div style="background-color: rgba(99, 102, 241, 0.1); padding: 12px 20px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; border-left: 4px solid var(--primary);">
+                <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: var(--primary); margin-right: 15px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                <div style="font-size: 1.05rem; line-height: 1.4;">
+                    Menampilkan hasil untuk <span style="font-weight: 600; color: var(--primary-dark);">{{ autocorrected_query }}</span>
+                    <br>
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">Pencarian asli: <del>{{ original_query }}</del> (diperbaiki otomatis)</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if has_ground_truth %}
+            <!-- Card Evaluasi Performa Model -->
+            <div class="evaluation-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; box-shadow: var(--shadow-sm); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+                <h3 style="font-size: 1.25rem; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                    Performance Evaluation
+                </h3>
+                <div class="training-scroll compact">
+                    <table class="epoch-table" style="background: rgba(17, 24, 39, 0.4);">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Top-1 Accuracy</th>
+                                <th>Precision (k=5)</th>
+                                <th>Recall (k=5)</th>
+                                <th>F1-Score (k=5)</th>
+                                <th>MAP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for method, m in [
+                                ('CBOW', eval_metrics.get('cbow', {})),
+                                ('FastText', eval_metrics.get('ft', {})),
+                                ('Skip-Gram', eval_metrics.get('sg', {})),
+                                ('TF-IDF', eval_metrics.get('tfidf', {}))
+                            ] %}
+                            <tr>
+                                <td><strong>{{ method }}</strong></td>
+                                <td>{{ "%.4f"|format(m.top1_accuracy) if (m and m.top1_accuracy is not none) else '0.0000' }}</td>
+                                <td>{{ "%.4f"|format(m.precision) if (m and m.precision is not none) else '0.0000' }}</td>
+                                <td>{{ "%.4f"|format(m.recall) if (m and m.recall is not none) else '0.0000' }}</td>
+                                <td>{{ "%.4f"|format(m.f1_score) if (m and m.f1_score is not none) else '0.0000' }}</td>
+                                <td>{{ "%.4f"|format(m.map) if (m and m.map is not none) else '0.0000' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <!-- Warning Alert Ground Truth belum di set -->
+            <div style="background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 20px; padding: 24px; margin-bottom: 26px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; gap: 18px;">
+                <div style="background: rgba(251, 191, 36, 0.12); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(251, 191, 36, 0.25); flex-shrink: 0;">
+                    <svg viewBox="0 0 24 24" style="width: 22px; height: 22px; fill: none; stroke: #fbbf24; stroke-width: 2;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                </div>
+                <div>
+                    <h4 style="color: #fbbf24; font-size: 1.05rem; font-weight: 600; margin-bottom: 4px;">Evaluasi Performa Belum Tersedia</h4>
+                    <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.45;">
+                        Silakan tentukan dokumen yang relevan di panel <strong>"Build Ground Truth for this Query"</strong> di bagian bawah halaman ini untuk menghitung metrik evaluasi dan membandingkan performa model.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if has_ground_truth %}
+            <!-- Card Chart.js Perbandingan F1 Score (Full Width & Stacked) -->
+            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 400px; width: 100%;">
+                <h4 style="font-size: 1.15rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Comparison of F1 Score or Map Scores</h4>
+                <div style="position: relative; height: 320px; width: 100%;">
+                    <canvas id="f1ScoreChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Line Chart Similarity Distribution (Always Visible, Full Width & Stacked) -->
+            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 400px; width: 100%;">
+                <h4 style="font-size: 1.15rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Similarity Score Distribution (Cosine Similarity)</h4>
+                <div style="position: relative; height: 320px; width: 100%;">
+                    <canvas id="similarityScoreDistributionChart"></canvas>
+                </div>
+            </div>
+
+            {% if has_ground_truth %}
+            <!-- Grid 4 Small Charts for Metrics (Only when ground truth is set) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 26px;">
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; height: 180px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:8px;">Top-1 Accuracy</span>
+                    <div style="position: relative; height: 130px;"><canvas id="smallChart_acc"></canvas></div>
+                </div>
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; height: 180px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:8px;">Precision</span>
+                    <div style="position: relative; height: 130px;"><canvas id="smallChart_prec"></canvas></div>
+                </div>
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; height: 180px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:8px;">Recall</span>
+                    <div style="position: relative; height: 130px;"><canvas id="smallChart_rec"></canvas></div>
+                </div>
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; height: 180px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:8px;">F1 Score</span>
+                    <div style="position: relative; height: 130px;"><canvas id="smallChart_f1"></canvas></div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Document Rankings Side-by-Side (Top 5) -->
+            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px;">
+                <h3 style="font-size: 1.2rem; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--secondary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    Document Rankings (Top 5)
+                </h3>
+                
+                {% set ns = namespace(cbow_sum=0.0, ft_sum=0.0, sg_sum=0.0, tfidf_sum=0.0) %}
+                {% set cbow_top5 = cbow_results[:5] %}
+                {% set ft_top5 = ft_results[:5] %}
+                {% set sg_top5 = sg_results[:5] %}
+                {% set tfidf_top5 = results[:5] %}
+                
+                {% for r in cbow_top5 %}{% set ns.cbow_sum = ns.cbow_sum + r.cbow_score %}{% endfor %}
+                {% for r in ft_top5 %}{% set ns.ft_sum = ns.ft_sum + r.ft_score %}{% endfor %}
+                {% for r in sg_top5 %}{% set ns.sg_sum = ns.sg_sum + r.sg_score %}{% endfor %}
+                {% for r in tfidf_top5 %}{% set ns.tfidf_sum = ns.tfidf_sum + r.score %}{% endfor %}
+                
+                {% set cbow_avg = ns.cbow_sum / (cbow_top5 | length) if cbow_top5 | length > 0 else 0.0 %}
+                {% set ft_avg = ns.ft_sum / (ft_top5 | length) if ft_top5 | length > 0 else 0.0 %}
+                {% set sg_avg = ns.sg_sum / (sg_top5 | length) if sg_top5 | length > 0 else 0.0 %}
+                {% set tfidf_avg = ns.tfidf_sum / (tfidf_top5 | length) if tfidf_top5 | length > 0 else 0.0 %}
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <!-- CBOW -->
+                    <div style="background: rgba(17, 24, 39, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 15px;">
+                        <h4 style="color: #fbbf24; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin-bottom: 10px; font-size: 0.95rem;">CBOW</h4>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px; margin-bottom: 12px; text-align: center;">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); display: block; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Average Cosine Similarity</span>
+                            <strong style="font-size: 1.1rem; color: #fbbf24; font-family: monospace;">{{ "%.4f"|format(cbow_avg) }}</strong>
+                        </div>
+                        {% for r in cbow_top5 %}
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+                            <span style="color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{{ r.display_name }}">
+                                {{ loop.index }}. {{ r.display_name }}
+                            </span>
+                            <span style="color: var(--text-muted); font-family: monospace;">{{ "%.4f"|format(r.cbow_score) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- FastText -->
+                    <div style="background: rgba(17, 24, 39, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 15px;">
+                        <h4 style="color: #ec4899; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin-bottom: 10px; font-size: 0.95rem;">FastText</h4>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px; margin-bottom: 12px; text-align: center;">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); display: block; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Average Cosine Similarity</span>
+                            <strong style="font-size: 1.1rem; color: #ec4899; font-family: monospace;">{{ "%.4f"|format(ft_avg) }}</strong>
+                        </div>
+                        {% for r in ft_top5 %}
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+                            <span style="color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{{ r.display_name }}">
+                                {{ loop.index }}. {{ r.display_name }}
+                            </span>
+                            <span style="color: var(--text-muted); font-family: monospace;">{{ "%.4f"|format(r.ft_score) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Skip-Gram -->
+                    <div style="background: rgba(17, 24, 39, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 15px;">
+                        <h4 style="color: #34d399; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin-bottom: 10px; font-size: 0.95rem;">Skip-Gram</h4>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px; margin-bottom: 12px; text-align: center;">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); display: block; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Average Cosine Similarity</span>
+                            <strong style="font-size: 1.1rem; color: #34d399; font-family: monospace;">{{ "%.4f"|format(sg_avg) }}</strong>
+                        </div>
+                        {% for r in sg_top5 %}
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+                            <span style="color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{{ r.display_name }}">
+                                {{ loop.index }}. {{ r.display_name }}
+                            </span>
+                            <span style="color: var(--text-muted); font-family: monospace;">{{ "%.4f"|format(r.sg_score) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- TF-IDF -->
+                    <div style="background: rgba(17, 24, 39, 0.4); border: 1px solid var(--card-border); border-radius: 12px; padding: 15px;">
+                        <h4 style="color: #818cf8; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin-bottom: 10px; font-size: 0.95rem;">TF-IDF</h4>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px; margin-bottom: 12px; text-align: center;">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); display: block; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Average Cosine Similarity</span>
+                            <strong style="font-size: 1.1rem; color: #818cf8; font-family: monospace;">{{ "%.4f"|format(tfidf_avg) }}</strong>
+                        </div>
+                        {% for r in tfidf_top5 %}
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+                            <span style="color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{{ r.display_name }}">
+                                {{ loop.index }}. {{ r.display_name }}
+                            </span>
+                            <span style="color: var(--text-muted); font-family: monospace;">{{ "%.4f"|format(r.score) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Build Ground Truth Panel -->
+            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px;">
+                <h3 style="font-size: 1.25rem; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Build Ground Truth for this Query
+                </h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+                    Pilih dokumen yang benar-benar relevan dengan query <strong>"{{ query }}"</strong>. Dokumen terpilih akan digunakan sebagai referensi evaluasi performa model di atas.
+                </p>
+                <form action="/save_ground_truth" method="POST">
+                    <input type="hidden" name="query" value="{{ query }}">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 18px;">
+                        {% for doc_name in doc_names %}
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-main); font-size: 0.9rem; cursor: pointer;">
+                            <input type="checkbox" name="relevant_docs" value="{{ doc_name }}" {% if doc_name in ground_truth_docs %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary);">
+                            {{ doc_name.replace('_', ' ').replace('.pdf', '') }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" style="background: var(--primary); border: none; color: var(--text-main); padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s;">
+                        <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.5;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                        Save & Update Stats
+                    </button>
+                </form>
+            </div>
+
+            <!-- Tombol Toggle Detail Proses -->
+            {% if word2vec_sg_training or word2vec_cbow_training or doc_preprocessing %}
+            <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+                <button type="button" id="btnToggleDetails" onclick="toggleTrainingDetails()" style="background: rgba(99, 102, 241, 0.1); border: 1px solid var(--primary); color: var(--text-main); padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+                    <svg id="toggleIcon" viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.3s;"><path d="M19 9l-7 7-7-7"/></svg>
+                    <span>Tampilkan Detail Proses Training & Preprocessing</span>
+                </button>
+            </div>
+
+            <div id="trainingDetailsContainer" style="display: none; margin-bottom: 26px;">
+                <!-- Tab Buttons -->
+                <div class="tabs-container" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                    <button type="button" class="tab-btn active" onclick="switchW2VTab('tfidf')" id="tabBtn_tfidf" style="background: rgba(99, 102, 241, 0.15); border: 1px solid var(--primary); color: var(--text-main); padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.3s;">
+                        TF-IDF & Preprocessing
+                    </button>
+                    <button type="button" class="tab-btn" onclick="switchW2VTab('sg')" id="tabBtn_sg" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-muted); padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.3s;">
+                        Word2Vec Skip-gram
+                    </button>
+                    <button type="button" class="tab-btn" onclick="switchW2VTab('cbow')" id="tabBtn_cbow" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-muted); padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.3s;">
+                        Word2Vec CBOW
+                    </button>
+                    <button type="button" class="tab-btn" onclick="switchW2VTab('ft')" id="tabBtn_ft" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-muted); padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.3s;">
+                        Word2Vec FastText
+                    </button>
+                </div>
+
+                <!-- Tab 0: TF-IDF Content -->
+                <div id="w2vContent_tfidf">
+                    <section class="training-panel" style="margin-bottom: 0;">
+                        <h2>Proses Preprocessing & Pembobotan TF-IDF</h2>
+                        <p>
+                            Dokumen asli diekstrak teksnya dari PDF, lalu diproses secara manual dengan tahapan: 
+                            Case Folding (mengubah ke huruf kecil dan menghapus tanda baca), Tokenisasi (pemisahan kata), 
+                            Stopword Removal (membuang kata tidak penting), dan Stemming Sastrawi (mencari kata dasar).
+                            Setelah itu, dihitung Term Frequency (TF), Document Frequency (DF), Inverse Document Frequency (IDF),
+                            hingga menghasilkan bobot TF-IDF untuk representasi vektor dokumen.
+                        </p>
+
+                        <!-- Subtitle: Preprocessing Query -->
+                        <div class="training-subtitle">Tahap Preprocessing Kata Kunci (Query)</div>
+                        <div class="training-scroll compact">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tahap Preprocessing</th>
+                                        <th>Hasil Pemrosesan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Query Asli</strong></td>
+                                        <td style="color: var(--primary-light);">{{ query_preprocessing.original }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Case Folding & Tokenisasi</strong></td>
+                                        <td>
+                                            {% for t in query_preprocessing.tokens %}
+                                                <span class="pair-chip" style="background: rgba(255,255,255,0.05);">{{ t }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Stopword Removal</strong></td>
+                                        <td>
+                                            {% for t in query_preprocessing.clean_tokens %}
+                                                <span class="pair-chip" style="background: rgba(16, 185, 129, 0.15);">{{ t }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Stemming Sastrawi</strong></td>
+                                        <td>
+                                            {% for t in query_preprocessing.stemmed_tokens %}
+                                                <span class="pair-chip" style="background: rgba(139, 92, 246, 0.15);">{{ t }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Subtitle: Preprocessing Dokumen (Sampel) -->
+                        <div class="training-subtitle">Ringkasan Preprocessing Dokumen (10 Teratas)</div>
+                        <div class="training-scroll">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Dokumen</th>
+                                        <th>Asli -> Tokens (Sampel 10 Kata Pertama)</th>
+                                        <th>Token Bersih</th>
+                                        <th>Kata Dasar (Stemmed)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc in doc_preprocessing[:10] %}
+                                    <tr>
+                                        <td><strong>{{ doc.display_name }}</strong></td>
+                                        <td>
+                                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">{{ doc.original_snippet }}...</div>
+                                            {% for t in doc.tokens_sample[:10] %}
+                                                <span style="font-size: 0.75rem; background: rgba(255,255,255,0.04); padding: 2px 4px; border-radius: 4px; display: inline-block; margin: 1px;">{{ t }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for t in doc.clean_tokens_sample[:10] %}
+                                                <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.1); padding: 2px 4px; border-radius: 4px; display: inline-block; margin: 1px; color: #34d399;">{{ t }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for t in doc.stemmed_tokens_sample[:10] %}
+                                                <span style="font-size: 0.75rem; background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 4px; display: inline-block; margin: 1px; color: #a78bfa;">{{ t }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Subtitle: Fitur & Bobot Kata Kunci -->
+                        <div class="training-subtitle">Bobot TF-IDF Kata Kunci Pencarian (Vocabulary Size: {{ feature_data.vocabulary_size }} kata)</div>
+                        <div class="training-scroll compact">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Term (Kata Kunci)</th>
+                                        <th>Term Frequency (TF) Query</th>
+                                        <th>IDF (Inverse Document Frequency)</th>
+                                        <th>Bobot TF-IDF Query</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in feature_data.query_table %}
+                                    <tr>
+                                        <td><strong style="color: var(--primary-light);">{{ row.term }}</strong></td>
+                                        <td>{{ row.tf }}</td>
+                                        <td>{{ row.idf }}</td>
+                                        <td><strong style="color: var(--secondary);">{{ row.tfidf }}</strong></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Subtitle: Perbandingan Nilai TF-IDF Dokumen untuk Kata Kunci -->
+                        <div class="training-subtitle">Perbandingan Nilai TF-IDF Dokumen (Top 10) vs Query</div>
+                        <div class="training-note">
+                            Menampilkan perbandingan nilai TF-IDF untuk term pencarian antara vektor query dengan 10 dokumen teratas.
+                        </div>
+                        <div class="training-scroll">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Term</th>
+                                        <th>Bobot Query</th>
+                                        {% for doc in comparison.top_docs %}
+                                            <th>{{ doc.display_name }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in comparison.rows %}
+                                    <tr>
+                                        <td><strong>{{ row.term }}</strong></td>
+                                        <td style="color: var(--primary-light);">{{ row.query_value }}</td>
+                                        {% for doc in comparison.top_docs %}
+                                            <td>{{ row.doc_values[doc.filename] }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Subtitle: Representasi Vektor Lengkap (Sampel Vocabulary) -->
+                        <div class="training-subtitle">Representasi Vektor TF-IDF Lengkap (100 Term Pertama)</div>
+                        <div class="training-note">
+                            Menampilkan 100 term pertama dari total {{ full_vectors.vocabulary_size }} term dalam dimensi vocabulary lengkap. Kolom di bawah mewakili nilai koordinat vektor untuk query dan masing-masing dokumen.
+                        </div>
+                        <div class="training-scroll">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Term Vocab</th>
+                                        <th>Query Coordinate</th>
+                                        {% for doc in full_vectors.top_docs %}
+                                            <th>{{ doc.display_name }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in full_vectors.rows[:100] %}
+                                    <tr {% if row.is_nonzero %}style="background: rgba(99, 102, 241, 0.05);"{% endif %}>
+                                        <td>{{ row.index }}</td>
+                                        <td><strong>{{ row.term }}</strong></td>
+                                        <td {% if row.query_value > 0 %}style="color: var(--primary-light); font-weight:600;"{% endif %}>{{ row.query_value }}</td>
+                                        {% for doc in full_vectors.top_docs %}
+                                            <td {% if row.doc_values[doc.filename] > 0 %}style="color: var(--secondary); font-weight:600;"{% endif %}>
+                                                {{ row.doc_values[doc.filename] }}
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Tab 1: Skip-gram Content -->
+                <div id="w2vContent_sg" style="display: none;">
+                    <section class="training-panel" style="margin-bottom: 0;">
+                        <h2>Proses Training Word2Vec Skip-gram</h2>
+                        <p>
+                            Token hasil preprocessing dipakai sebagai korpus. Untuk setiap target word,
+                            sistem mengambil context word dalam window kiri-kanan sebesar {{ word2vec_sg_training.window_size }},
+                            lalu melatih embedding dengan arsitektur Skip-gram full-softmax. Semua hitungan Word2Vec dibuat manual:
+                            one-hot encode, hidden layer, output logits, softmax, gradient update, dan average loss dihitung dari list Python biasa.
+                        </p>
+
+                        <div class="training-grid">
+                            <div class="training-stat">
+                                <strong>{% if word2vec_sg_training.loaded_from_cache %}Ya{% else %}Tidak{% endif %}</strong>
+                                <span>dimuat dari cache</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_sg_training.document_count }}</strong>
+                                <span>dokumen training</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_sg_training.token_count }}</strong>
+                                <span>total token</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_sg_training.vocabulary_size }}</strong>
+                                <span>ukuran vocabulary</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_sg_training.pair_count }}</strong>
+                                <span>pasangan target-context</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_sg_training.trained_pair_count }}</strong>
+                                <span>pasangan dihitung softmax</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_sg_training.vector_size }}</strong>
+                                <span>dimensi embedding</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_sg_training.epochs }}</strong>
+                                <span>epoch training</span>
+                            </div>
+                        </div>
+                        <div class="training-note">
+                            Cache disimpan di <strong>{{ word2vec_sg_training.cache_path }}</strong>. Jika token dokumen atau parameter training tidak berubah,
+                            vocabulary, bobot, X_train, y_train, dan ringkasan training langsung dimuat dari storage.
+                        </div>
+
+                        <div class="training-subtitle">Semua kata vocabulary hasil preprocessing (100 Teratas)</div>
+                        <div class="training-note">
+                            Menampilkan 100 kata pertama dari total {{ word2vec_sg_training.vocabulary_size }} kata vocabulary. Frekuensi dipakai untuk negative sampling manual.
+                        </div>
+                        <div class="training-scroll compact">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Kata</th>
+                                        <th>Frekuensi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for word in word2vec_sg_training.word_counts[:100] %}
+                                    <tr>
+                                        <td>{{ word.index }}</td>
+                                        <td>{{ word.word }}</td>
+                                        <td>{{ word.count }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Pemetaan X_train dan y_train (100 Awal)</div>
+                        <div class="training-note">
+                            Pada Skip-gram, X_train adalah target word. y_train adalah context word yang harus diprediksi oleh model.
+                            Menampilkan 100 pasangan pertama dari total {{ word2vec_sg_training.xy_train|length }} pasangan. Index dimulai dari 0 agar sesuai dengan posisi kata di vocabulary dan one-hot vector.
+                        </div>
+                        <div class="training-scroll">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>X_train index</th>
+                                        <th>X_train word</th>
+                                        <th>y_train index</th>
+                                        <th>y_train word</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in word2vec_sg_training.xy_train[:100] %}
+                                    <tr>
+                                        <td>{{ row.index }}</td>
+                                        <td>{{ row.x_train_index }}</td>
+                                        <td>{{ row.x_train_word }}</td>
+                                        <td>{{ row.y_train_index }}</td>
+                                        <td>{{ row.y_train_word }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Contoh awal pasangan Skip-gram dari window={{ word2vec_sg_training.window_size }}</div>
+                        <div class="pair-list">
+                            {% for pair in word2vec_sg_training.sample_pairs %}
+                            <span class="pair-chip">{{ pair.target }} -> {{ pair.context }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="training-subtitle">Semua pasangan target-context (100 Awal)</div>
+                        <div class="training-note">
+                            Setiap baris adalah satu pasangan training Skip-gram. Misalnya target A dengan context B berarti model belajar menaikkan peluang B muncul di sekitar A.
+                            Menampilkan 100 pasangan pertama dari total {{ word2vec_sg_training.pair_count }} pasangan.
+                        </div>
+                        <div class="training-scroll">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Target word</th>
+                                        <th>Context word</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pair in word2vec_sg_training.all_pairs[:100] %}
+                                    <tr>
+                                        <td>{{ pair.index }}</td>
+                                        <td>{{ pair.target }}</td>
+                                        <td>{{ pair.context }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Proses 4 layer Word2Vec Skip-gram</div>
+                        <div class="training-note">
+                            Tabel ini menampilkan proses layer untuk pasangan training awal: input one-hot target, hidden vector dari bobot input,
+                            output logits untuk seluruh vocabulary, softmax probability, dan label one-hot context yang seharusnya diprediksi.
+                            Untuk menjaga aplikasi tetap ringan, update softmax manual dihitung pada {{ word2vec_sg_training.trained_pair_count }}
+                            pasangan awal dari total {{ word2vec_sg_training.pair_count }} pasangan; seluruh pasangan tetap ditampilkan di tabel sebelumnya.
+                        </div>
+                        <div class="training-scroll wide">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Target -> Context</th>
+                                        <th>Input Layer One-Hot</th>
+                                        <th>Hidden Layer</th>
+                                        <th>Output Layer Logits</th>
+                                        <th>Softmax</th>
+                                        <th>Expected One-Hot</th>
+                                        <th>P(context)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for layer in word2vec_sg_training.layer_process %}
+                                    <tr>
+                                        <td>{{ layer.index }}</td>
+                                        <td>{{ layer.target_word }} -> {{ layer.context_word }}</td>
+                                        <td class="vector-cell">{{ layer.input_one_hot }}</td>
+                                        <td class="vector-cell">{{ layer.hidden_vector }}</td>
+                                        <td class="vector-cell">{{ layer.output_logits }}</td>
+                                        <td class="vector-cell">{{ layer.softmax_probabilities }}</td>
+                                        <td class="vector-cell">{{ layer.expected_one_hot }}</td>
+                                        <td>{{ "%.6f"|format(layer.target_probability) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Log training semua epoch</div>
+                        <div class="training-scroll compact">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Epoch</th>
+                                        <th>Learning rate</th>
+                                        <th>Average loss</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in word2vec_sg_training.epoch_logs %}
+                                    <tr>
+                                        <td>{{ log.epoch }}</td>
+                                        <td>{{ "%.6f"|format(log.learning_rate) }}</td>
+                                        <td>{{ "%.6f"|format(log.average_loss) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Tab 2: CBOW Content -->
+                <div id="w2vContent_cbow" style="display: none;">
+                    <section class="training-panel" style="margin-bottom: 0;">
+                        <h2>Proses Training Word2Vec CBOW</h2>
+                        <p>
+                            Token hasil preprocessing dipakai sebagai korpus. Untuk setiap target word,
+                            sistem mengambil context word dalam window kiri-kanan sebesar {{ word2vec_cbow_training.window_size }},
+                            lalu melatih embedding dengan arsitektur CBOW full-softmax. Semua hitungan Word2Vec dibuat manual:
+                            one-hot encode, hidden layer (merata-ratakan context words), output logits, softmax, gradient update, dan average loss dihitung dari list Python biasa.
+                        </p>
+
+                        <div class="training-grid">
+                            <div class="training-stat">
+                                <strong>{% if word2vec_cbow_training.loaded_from_cache %}Ya{% else %}Tidak{% endif %}</strong>
+                                <span>dimuat dari cache</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_cbow_training.document_count }}</strong>
+                                <span>dokumen training</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_cbow_training.token_count }}</strong>
+                                <span>total token</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_cbow_training.vocabulary_size }}</strong>
+                                <span>ukuran vocabulary</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_cbow_training.pair_count }}</strong>
+                                <span>pasangan target-context</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_cbow_training.trained_pair_count }}</strong>
+                                <span>pasangan dihitung softmax</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_cbow_training.vector_size }}</strong>
+                                <span>dimensi embedding</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_cbow_training.epochs }}</strong>
+                                <span>epoch training</span>
+                            </div>
+                        </div>
+                        <div class="training-note">
+                            Cache disimpan di <strong>{{ word2vec_cbow_training.cache_path }}</strong>. Jika token dokumen atau parameter training tidak berubah,
+                            vocabulary, bobot, X_train, y_train, dan ringkasan training langsung dimuat dari storage.
+                        </div>
+
+                        <div class="training-subtitle">Semua kata vocabulary hasil preprocessing (100 Teratas)</div>
+                        <div class="training-note">
+                            Menampilkan 100 kata pertama dari total {{ word2vec_cbow_training.vocabulary_size }} kata vocabulary. Frekuensi dipakai untuk negative sampling manual.
+                        </div>
+                        <div class="training-scroll compact">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Kata</th>
+                                        <th>Frekuensi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for word in word2vec_cbow_training.word_counts[:100] %}
+                                    <tr>
+                                        <td>{{ word.index }}</td>
+                                        <td>{{ word.word }}</td>
+                                        <td>{{ word.count }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Pemetaan X_train dan y_train (100 Awal)</div>
+                        <div class="training-note">
+                            Pada CBOW, X_train adalah context words (gabungan kata tetangga). y_train adalah target word yang harus diprediksi oleh model.
+                            Menampilkan 100 pasangan pertama dari total {{ word2vec_cbow_training.xy_train|length }} pasangan. Index dimulai dari 0 agar sesuai dengan posisi kata di vocabulary dan one-hot vector.
+                        </div>
+                        <div class="training-scroll">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>X_train index</th>
+                                        <th>X_train word</th>
+                                        <th>y_train index</th>
+                                        <th>y_train word</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in word2vec_cbow_training.xy_train[:100] %}
+                                    <tr>
+                                        <td>{{ row.index }}</td>
+                                        <td>{{ row.x_train_index }}</td>
+                                        <td>{{ row.x_train_word }}</td>
+                                        <td>{{ row.y_train_index }}</td>
+                                        <td>{{ row.y_train_word }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Contoh awal pasangan CBOW dari window={{ word2vec_cbow_training.window_size }}</div>
+                        <div class="pair-list">
+                            {% for pair in word2vec_cbow_training.sample_pairs %}
+                            <span class="pair-chip">{{ pair.target }} -> {{ pair.context }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="training-subtitle">Semua pasangan target-context (100 Awal)</div>
+                        <div class="training-note">
+                            Setiap baris adalah satu pasangan training CBOW. Misalnya target B dengan context A berarti model belajar memprediksi peluang munculnya target B berdasarkan context A.
+                            Menampilkan 100 pasangan pertama dari total {{ word2vec_cbow_training.pair_count }} pasangan.
+                        </div>
+                        <div class="training-scroll">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Target word</th>
+                                        <th>Context word</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pair in word2vec_cbow_training.all_pairs[:100] %}
+                                    <tr>
+                                        <td>{{ pair.index }}</td>
+                                        <td>{{ pair.target }}</td>
+                                        <td>{{ pair.context }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Proses 4 layer Word2Vec CBOW</div>
+                        <div class="training-note">
+                            Tabel ini menampilkan proses layer untuk pasangan training awal: input one-hot context (rata-rata), hidden vector dari bobot input,
+                            output logits untuk seluruh vocabulary, softmax probability, dan label one-hot target yang seharusnya diprediksi.
+                            Untuk menjaga aplikasi tetap ringan, update softmax manual dihitung pada {{ word2vec_cbow_training.trained_pair_count }}
+                            pasangan awal dari total {{ word2vec_cbow_training.pair_count }} pasangan; seluruh pasangan tetap ditampilkan di tabel sebelumnya.
+                        </div>
+                        <div class="training-scroll wide">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Target -> Context</th>
+                                        <th>Input Layer One-Hot</th>
+                                        <th>Hidden Layer</th>
+                                        <th>Output Layer Logits</th>
+                                        <th>Softmax</th>
+                                        <th>Expected One-Hot</th>
+                                        <th>P(context)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for layer in word2vec_cbow_training.layer_process %}
+                                    <tr>
+                                        <td>{{ layer.index }}</td>
+                                        <td>{{ layer.target_word }} -> {{ layer.context_word }}</td>
+                                        <td class="vector-cell">{{ layer.input_one_hot }}</td>
+                                        <td class="vector-cell">{{ layer.hidden_vector }}</td>
+                                        <td class="vector-cell">{{ layer.output_logits }}</td>
+                                        <td class="vector-cell">{{ layer.softmax_probabilities }}</td>
+                                        <td class="vector-cell">{{ layer.expected_one_hot }}</td>
+                                        <td>{{ "%.6f"|format(layer.target_probability) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="training-subtitle">Log training semua epoch</div>
+                        <div class="training-scroll compact">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Epoch</th>
+                                        <th>Learning rate</th>
+                                        <th>Average loss</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in word2vec_cbow_training.epoch_logs %}
+                                    <tr>
+                                        <td>{{ log.epoch }}</td>
+                                        <td>{{ "%.6f"|format(log.learning_rate) }}</td>
+                                        <td>{{ "%.6f"|format(log.average_loss) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Tab 3: FastText Content -->
+                <div id="w2vContent_ft" style="display: none;">
+                    <section class="training-panel" style="margin-bottom: 0;">
+                        <h2>Proses Training Word2Vec FastText</h2>
+                        <p>
+                            FastText melatih subwords (character 3-grams) alih-alih kata utuh.
+                            Sistem memecah setiap token menjadi bagian n-gram karakter (misalnya "peta" menjadi &lt;pe, pet, eta, ta&gt;)
+                            dan melatih representasi vektornya secara manual menggunakan arsitektur Skip-gram. Vektor dari sebuah kata 
+                            adalah rata-rata dari seluruh representasi vektor subwords penyusunnya. Hal ini memungkinkan pencarian yang sangat robust 
+                            terhadap kata bermorfologi mirip (misal: kesalahan ketik atau imbuhan).
+                        </p>
+
+                        <div class="training-grid">
+                            <div class="training-stat">
+                                <strong>{% if word2vec_ft_training.loaded_from_cache %}Ya{% else %}Tidak{% endif %}</strong>
+                                <span>dimuat dari cache</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_ft_training.document_count }}</strong>
+                                <span>dokumen training</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_ft_training.token_count }}</strong>
+                                <span>total token</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_ft_training.vocabulary_size }}</strong>
+                                <span>subwords vocabulary</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_ft_training.pair_count }}</strong>
+                                <span>pasangan target-context</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_ft_training.trained_pair_count }}</strong>
+                                <span>pasangan dihitung softmax</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_ft_training.vector_size }}</strong>
+                                <span>dimensi embedding</span>
+                            </div>
+                            <div class="training-stat">
+                                <strong>{{ word2vec_ft_training.epochs }}</strong>
+                                <span>epoch training</span>
+                            </div>
+                        </div>
+                        <div class="training-note">
+                            Cache disimpan di <strong>{{ word2vec_ft_training.cache_path }}</strong>.
+                        </div>
+
+                        <div class="training-subtitle">Log training semua epoch (FastText)</div>
+                        <div class="training-scroll compact">
+                            <table class="epoch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Epoch</th>
+                                        <th>Learning rate</th>
+                                        <th>Average loss</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in word2vec_ft_training.epoch_logs %}
+                                    <tr>
+                                        <td>{{ log.epoch }}</td>
+                                        <td>{{ "%.6f"|format(log.learning_rate) }}</td>
+                                        <td>{{ "%.6f"|format(log.average_loss) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="results-list">
+                {% for r in results[:10] %}
+                {% if r.score > 0 or r.sg_score > 0 or r.cbow_score > 0 %}
+                <div class="result-card" style="opacity: 0; transform: translateY(15px);">
+                    <div class="card-meta">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+                        </div>
+                        <a href="/docs/{{ r.filename }}" target="_blank" class="card-path">
+                            /docs/{{ r.filename }}
+                        </a>
+                    </div>
+                    
+                    <a href="/docs/{{ r.filename }}" target="_blank" class="card-title">
+                        {{ r.display_name }}
+                    </a>
+
+                    <div class="score-comparison" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <span class="score-pill tfidf">TF-IDF #{{ r.rank }}: {{ "%.4f"|format(r.score) }}</span>
+                        <span class="score-pill sg">W2V SG #{{ r.sg_rank }}: {{ "%.4f"|format(r.sg_score) }}</span>
+                        <span class="score-pill cbow">W2V CBOW #{{ r.cbow_rank }}: {{ "%.4f"|format(r.cbow_score) }}</span>
+                        <span class="score-pill ft" style="color: #ec4899; background: rgba(236, 72, 153, 0.12); border: 1px solid rgba(236, 72, 153, 0.35);">FastText #{{ r.ft_rank }}: {{ "%.4f"|format(r.ft_score) }}</span>
+                    </div>
+                    
+                    <div class="card-snippet">
+                        {{ r.highlighted_snippet|safe }}
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                {% if relevant_count == 0 %}
+                <div class="empty-view">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <h3 style="margin-bottom: 12px; color: var(--text-main); font-size: 1.5rem;">Tidak Ada Dokumen yang Relevan</h3>
+                    <p style="color: var(--text-muted); font-size: 1.05rem;">Kata kunci "<strong>{% if autocorrected_query %}{{ autocorrected_query }}{% else %}{{ query }}{% endif %}</strong>" tidak ditemukan dalam database provinsi kami.</p>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+        {% endif %}
+
+        <footer class="footer-tag">
+            &copy; 2026 Semantika Search Engine &bull; Cosine Similarity Search
+        </footer>
+    </div>
+
+    <script>
+        function toggleTrainingDetails() {
+            const container = document.getElementById('trainingDetailsContainer');
+            const btn = document.getElementById('btnToggleDetails');
+            const icon = document.getElementById('toggleIcon');
+            
+            if (container.style.display === 'none' || container.style.display === '') {
+                container.style.display = 'block';
+                btn.style.background = 'var(--primary)';
+                btn.style.borderColor = 'var(--primary-dark)';
+                btn.querySelector('span').innerText = 'Sembunyikan Detail Proses Training & Preprocessing';
+                icon.style.transform = 'rotate(180deg)';
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                container.style.display = 'none';
+                btn.style.background = 'rgba(99, 102, 241, 0.1)';
+                btn.style.borderColor = 'var(--primary)';
+                btn.querySelector('span').innerText = 'Tampilkan Detail Proses Training & Preprocessing';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function switchW2VTab(arch) {
+            const tfidfContent = document.getElementById('w2vContent_tfidf');
+            const sgContent = document.getElementById('w2vContent_sg');
+            const cbowContent = document.getElementById('w2vContent_cbow');
+            const ftContent = document.getElementById('w2vContent_ft');
+            
+            const tfidfBtn = document.getElementById('tabBtn_tfidf');
+            const sgBtn = document.getElementById('tabBtn_sg');
+            const cbowBtn = document.getElementById('tabBtn_cbow');
+            const ftBtn = document.getElementById('tabBtn_ft');
+            
+            if (tfidfContent) tfidfContent.style.display = 'none';
+            if (sgContent) sgContent.style.display = 'none';
+            if (cbowContent) cbowContent.style.display = 'none';
+            if (ftContent) ftContent.style.display = 'none';
+            
+            const deactivate = (btn) => {
+                if (btn) {
+                    btn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    btn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.color = 'var(--text-muted)';
+                }
+            };
+            deactivate(tfidfBtn);
+            deactivate(sgBtn);
+            deactivate(cbowBtn);
+            deactivate(ftBtn);
+            
+            if (arch === 'tfidf') {
+                if (tfidfContent) tfidfContent.style.display = 'block';
+                if (tfidfBtn) {
+                    tfidfBtn.style.background = 'rgba(99, 102, 241, 0.15)';
+                    tfidfBtn.style.borderColor = 'var(--primary)';
+                    tfidfBtn.style.color = 'var(--text-main)';
+                }
+            } else if (arch === 'sg') {
+                if (sgContent) sgContent.style.display = 'block';
+                if (sgBtn) {
+                    sgBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+                    sgBtn.style.borderColor = 'var(--secondary)';
+                    sgBtn.style.color = 'var(--text-main)';
+                }
+            } else if (arch === 'cbow') {
+                if (cbowContent) cbowContent.style.display = 'block';
+                if (cbowBtn) {
+                    cbowBtn.style.background = 'rgba(251, 191, 36, 0.15)';
+                    cbowBtn.style.borderColor = '#fbbf24';
+                    cbowBtn.style.color = 'var(--text-main)';
+                }
+            } else if (arch === 'ft') {
+                if (ftContent) ftContent.style.display = 'block';
+                if (ftBtn) {
+                    ftBtn.style.background = 'rgba(236, 72, 153, 0.15)';
+                    ftBtn.style.borderColor = '#ec4899';
+                    ftBtn.style.color = 'var(--text-main)';
+                }
+            }
+        }
+
+        function toggleImplementationMode() {
+            const mode = document.getElementById('implementation_mode').value;
+            const container = document.getElementById('max_pairs_container');
+            if (container) {
+                if (mode === 'manual') {
+                    container.style.display = 'flex';
+                } else {
+                    container.style.display = 'none';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleImplementationMode();
+            const cards = document.querySelectorAll('.result-card');
+            cards.forEach((card, index) => {
+                card.style.animation = `elegantFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards ${index * 0.08}s`;
+            });
+
+                        // Data untuk Chart.js
+            // Chart.js - F1-Score Chart
+            const f1Canvas = document.getElementById('f1ScoreChart');
+            if (f1Canvas) {
+                const f1Ctx = f1Canvas.getContext('2d');
+                new Chart(f1Ctx, {
+                    data: {
+                        labels: ['CBOW', 'FastText', 'Skip-Gram', 'TF-IDF'],
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: 'F1-Score',
+                                data: [
+                                    {{ eval_metrics.cbow.f1_score if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                                    {{ eval_metrics.ft.f1_score if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                                    {{ eval_metrics.sg.f1_score if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                                    {{ eval_metrics.tfidf.f1_score if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+                                ],
+                                backgroundColor: [
+                                    'rgba(251, 191, 36, 0.6)',
+                                    'rgba(236, 72, 153, 0.6)',
+                                    'rgba(16, 185, 129, 0.6)',
+                                    'rgba(99, 102, 241, 0.6)'
+                                ],
+                                borderColor: [
+                                    '#fbbf24',
+                                    '#ec4899',
+                                    '#34d399',
+                                    '#818cf8'
+                                ],
+                                borderWidth: 1,
+                                yAxisID: 'yF1'
+                            },
+                            {
+                                type: 'line',
+                                label: 'MAP',
+                                data: [
+                                    {{ eval_metrics.cbow.map if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                                    {{ eval_metrics.ft.map if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                                    {{ eval_metrics.sg.map if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                                    {{ eval_metrics.tfidf.map if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+                                ],
+                                borderColor: '#f43f5e',
+                                backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                                fill: false,
+                                tension: 0.35,
+                                pointBackgroundColor: '#f43f5e',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 1.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                yAxisID: 'yMAP'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#f1f5f9' }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+                            yF1: {
+                                type: 'linear',
+                                position: 'left',
+                                title: { display: true, text: 'F1-Score', color: '#94a3b8' },
+                                beginAtZero: true,
+                                max: 1.0,
+                                ticks: { color: '#94a3b8' },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                            },
+                            yMAP: {
+                                type: 'linear',
+                                position: 'right',
+                                title: { display: true, text: 'MAP', color: '#94a3b8' },
+                                beginAtZero: true,
+                                max: 1.0,
+                                ticks: { color: '#94a3b8' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Similarity Score Distribution Line Chart
+            const docLabels = [];
+            const tfidfScores = [];
+            const sgScores = [];
+            const cbowScores = [];
+            const ftScores = [];
+
+            {% for name in doc_names %}
+                docLabels.push("{{ name.replace('_', ' ').replace('.pdf', '') }}");
+                {% for r in results %}
+                    {% if r.filename == name %}
+                        tfidfScores.push({{ r.score }});
+                        sgScores.push({{ r.sg_score }});
+                        cbowScores.push({{ r.cbow_score }});
+                        ftScores.push({{ r.ft_score }});
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+
+            const distCanvas = document.getElementById('similarityScoreDistributionChart');
+            if (distCanvas) {
+                const distCtx = distCanvas.getContext('2d');
+                new Chart(distCtx, {
+                    type: 'line',
+                    data: {
+                        labels: docLabels,
+                        datasets: [
+                            {
+                                label: 'CBOW',
+                                data: cbowScores,
+                                borderColor: '#fbbf24',
+                                backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                                fill: false,
+                                tension: 0.15
+                            },
+                            {
+                                label: 'FastText',
+                                data: ftScores,
+                                borderColor: '#ec4899',
+                                backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                                fill: false,
+                                tension: 0.15
+                            },
+                            {
+                                label: 'Skip-Gram',
+                                data: sgScores,
+                                borderColor: '#34d399',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                fill: false,
+                                tension: 0.15
+                            },
+                            {
+                                label: 'TF-IDF',
+                                data: tfidfScores,
+                                borderColor: '#818cf8',
+                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                fill: false,
+                                tension: 0.15
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#f1f5f9' } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+                            y: { beginAtZero: true, max: 1.0, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+                        }
+                    }
+                });
+            }
+
+            // Small Helper function to create mini charts
+            function createMiniChart(elementId, labelText, dataArr, borderColors, bgColors) {
+                const canvas = document.getElementById(elementId);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['CBOW', 'FT', 'SG', 'TF'],
+                        datasets: [{
+                            data: dataArr,
+                            backgroundColor: bgColors,
+                            borderColor: borderColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: false }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94a3b8', font: { size: 8 } }, grid: { display: false } },
+                            y: { beginAtZero: true, max: 1.0, ticks: { color: '#94a3b8', font: { size: 8 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+
+            const bgColors = ['rgba(251, 191, 36, 0.6)', 'rgba(236, 72, 153, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(99, 102, 241, 0.6)'];
+            const borderColors = ['#fbbf24', '#ec4899', '#34d399', '#818cf8'];
+
+            createMiniChart('smallChart_acc', 'Accuracy', [
+                {{ eval_metrics.cbow.top1_accuracy if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                {{ eval_metrics.ft.top1_accuracy if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                {{ eval_metrics.sg.top1_accuracy if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                {{ eval_metrics.tfidf.top1_accuracy if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            ], borderColors, bgColors);
+
+            createMiniChart('smallChart_prec', 'Precision', [
+                {{ eval_metrics.cbow.precision if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                {{ eval_metrics.ft.precision if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                {{ eval_metrics.sg.precision if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                {{ eval_metrics.tfidf.precision if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            ], borderColors, bgColors);
+
+            createMiniChart('smallChart_rec', 'Recall', [
+                {{ eval_metrics.cbow.recall if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                {{ eval_metrics.ft.recall if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                {{ eval_metrics.sg.recall if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                {{ eval_metrics.tfidf.recall if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            ], borderColors, bgColors);
+
+            createMiniChart('smallChart_f1', 'F1 Score', [
+                {{ eval_metrics.cbow.f1_score if (eval_metrics and eval_metrics.cbow) else 0.0 }},
+                {{ eval_metrics.ft.f1_score if (eval_metrics and eval_metrics.ft) else 0.0 }},
+                {{ eval_metrics.sg.f1_score if (eval_metrics and eval_metrics.sg) else 0.0 }},
+                {{ eval_metrics.tfidf.f1_score if (eval_metrics and eval_metrics.tfidf) else 0.0 }}
+            ], borderColors, bgColors);
+        });
+    </script>
+</body>
+</html>

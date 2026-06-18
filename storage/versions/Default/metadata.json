@@ -1,0 +1,11 @@
+{
+    "version_name": "Default",
+    "created_at": "2026-06-18 11:30:08",
+    "document_count": 10,
+    "vocabulary_size": 9291,
+    "window_size": 2,
+    "vector_size": 10,
+    "epochs": 1,
+    "max_training_pairs": 300,
+    "use_library": true
+}

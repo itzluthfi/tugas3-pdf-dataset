@@ -1,0 +1,9 @@
+{
+  "source_directories": [
+    "."
+  ],
+  "virtual_environment": "venv",
+  "search_path": [
+    "modules"
+  ]
+}
