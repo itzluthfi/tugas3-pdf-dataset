@@ -43,6 +43,10 @@
             background: #334155;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -103,12 +107,13 @@
         }
 
         .header-container.active {
-            padding: 20px 30px;
+            padding: 15px 30px;
             background: rgba(11, 15, 25, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-            flex-direction: row;
+            flex-direction: column;
+            align-items: flex-start;
             justify-content: flex-start;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: sticky;
@@ -853,19 +858,33 @@
             width: 100%;
         }
 
-        .query-history-bar a {
+        .history-chip {
             box-shadow: var(--shadow-sm);
             transition: all 0.2s ease;
         }
 
-        .query-history-bar a:hover {
+        .history-chip:hover {
             background: rgba(99, 102, 241, 0.2) !important;
             border-color: var(--primary-light) !important;
-            color: var(--primary-light) !important;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
         }
         
+        .history-chip:hover a {
+            color: var(--primary-light) !important;
+        }
+
+        .charts-row-eval {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 26px;
+        }
+        @media (max-width: 991px) {
+            .charts-row-eval {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -873,46 +892,71 @@
     <div class="ambient-glow"></div>
 
     <div class="page-wrapper">
+        <!-- Top Navbar -->
+        <nav style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; box-sizing: border-box; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(11, 15, 25, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 100;">
+            <a href="/" style="text-decoration: none; font-size: 1.25rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                <span style="background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Semantika</span>
+            </a>
+            <div style="display: flex; gap: 24px;">
+                <a href="/" style="text-decoration: none; color: var(--primary-light); font-size: 0.9rem; font-weight: 600; transition: color 0.2s;">🔍 Cari Dokumen</a>
+                <a href="/evaluation" style="text-decoration: none; color: var(--text-muted); font-size: 0.9rem; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='var(--primary-light)';" onmouseout="this.style.color='var(--text-muted)';">📊 Analisis Global</a>
+            </div>
+        </nav>
+
         <header class="header-container {% if searched %}active{% else %}initial{% endif %}">
-            <a href="/" class="brand-logo" style="text-decoration: none;">Semantika</a>
-            {% if not searched %}
-                <div class="brand-subtitle" style="color: var(--text-muted); font-size: 1.05rem; margin-top: -25px; margin-bottom: 30px; text-align: center; max-width: 600px; font-weight: 300; letter-spacing: 0.5px; opacity: 0.85;">
-                    Advanced Document Retrieval System Comparison Dashboard
+            <div class="header-main-row" style="display: flex; align-items: center; width: 100%; justify-content: {% if searched %}flex-start{% else %}center{% endif %}; flex-direction: {% if searched %}row{% else %}column{% endif %}; gap: {% if searched %}10px{% else %}0{% endif %};">
+                <a href="/" class="brand-logo" style="text-decoration: none;">Semantika</a>
+                {% if not searched %}
+                    <div class="brand-subtitle" style="color: var(--text-muted); font-size: 1.05rem; margin-top: -25px; margin-bottom: 30px; text-align: center; max-width: 600px; font-weight: 300; letter-spacing: 0.5px; opacity: 0.85;">
+                        Advanced Document Retrieval System Comparison Dashboard
+                    </div>
+                {% endif %}
+                
+                <div class="search-form" style="width: 100%; max-width: {% if searched %}750px{% else %}680px{% endif %};">
+                    <div class="search-input-wrapper">
+                        <form method="POST" action="/" style="width: 100%; height: 100%; position: relative;">
+                            <div class="search-icon">
+                                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </div>
+                            
+                            <input type="text" name="query" class="search-input" placeholder="Temukan dokumen daerah yang Anda butuhkan..." value="{{ query }}" required autocomplete="off" autofocus>
+                            
+                            <button type="submit" class="search-submit">Cari</button>
+                        </form>
+                    </div>
                 </div>
-            {% endif %}
-            
-            <div class="search-form">
-                <div class="search-input-wrapper">
-                    <form method="POST" action="/" style="width: 100%; height: 100%; position: relative;">
-                        <div class="search-icon">
-                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        </div>
-                        
-                        <input type="text" name="query" class="search-input" placeholder="Temukan dokumen daerah yang Anda butuhkan..." value="{{ query }}" required autocomplete="off" autofocus>
-                        
-                        <button type="submit" class="search-submit">Cari</button>
-                    </form>
-                </div>
+                
+                {% if searched %}
+                    <a href="/evaluation" class="nav-btn-global" style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: var(--primary-light); padding: 8px 16px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s; white-space: nowrap; box-shadow: var(--shadow-sm);" onmouseover="this.style.background='rgba(99, 102, 241, 0.25)'; this.style.borderColor='var(--primary)';" onmouseout="this.style.background='rgba(99, 102, 241, 0.15)'; this.style.borderColor='rgba(99, 102, 241, 0.3)';">
+                        <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        📊 Analisis Global
+                    </a>
+                {% endif %}
             </div>
             
             <!-- Riwayat Pencarian -->
             {% if query_history %}
-            <div class="query-history-bar" style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 680px; width: 100%; z-index: 50;">
-                <span style="color: var(--text-muted); font-size: 0.82rem; font-weight: 500; display: inline-flex; align-items: center; margin-right: 4px;">Riwayat Pencarian:</span>
-                {% for hist_q in query_history %}
-                <a href="/?query={{ hist_q|urlencode }}" style="background: rgba(22, 28, 45, 0.5); color: var(--text-main); font-size: 0.8rem; padding: 6px 14px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, 0.05); text-decoration: none; white-space: nowrap;">
-                    {{ hist_q }}
-                </a>
-                {% endfor %}
+            <div class="query-history-bar" style="margin-top: 14px; display: flex; gap: 10px; justify-content: {% if searched %}flex-start{% else %}center{% endif %}; width: 100%; z-index: 50; padding-left: {% if searched %}180px{% else %}0{% endif %}; box-sizing: border-box; align-items: center;">
+                <button onclick="openHistoryModal()" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); color: var(--primary-light); font-size: 0.82rem; padding: 6px 16px; border-radius: 99px; cursor: pointer; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm);" onmouseover="this.style.background='rgba(99, 102, 241, 0.25)';" onmouseout="this.style.background='rgba(99, 102, 241, 0.15)';">
+                    <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.5;"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                    Lihat Riwayat & Ground Truth ({{ query_history|length }})
+                </button>
+                <button onclick="clearHistory(event)" style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); font-size: 0.82rem; padding: 6px 16px; border-radius: 99px; cursor: pointer; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)';" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)';">
+                    Hapus Semua
+                </button>
             </div>
             {% endif %}
             
             {% if not searched %}
-                <div style="margin-top: 40px; color: var(--text-muted); font-size: 0.95rem; display: flex; gap: 15px;">
+                <div style="margin-top: 40px; color: var(--text-muted); font-size: 0.95rem; display: flex; gap: 15px; align-items: center;">
                     <span style="background: rgba(22, 28, 45, 0.7); color: var(--text-main); padding: 8px 16px; border-radius: 99px; box-shadow: var(--shadow-sm); border: 1px solid var(--card-border); display: inline-flex; align-items: center;">
                         <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: var(--primary-light); stroke-width: 2; margin-right: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
                         10 Dokumen Provinsi
                     </span>
+                    <a href="/evaluation" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: var(--primary-light); padding: 8px 16px; border-radius: 99px; box-shadow: var(--shadow-sm); display: inline-flex; align-items: center; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(99, 102, 241, 0.25)';" onmouseout="this.style.background='rgba(99, 102, 241, 0.15)';">
+                        <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-right: 8px;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        📊 Analisis Global Sistem
+                    </a>
                 </div>
             {% endif %}
         </header>
@@ -1001,8 +1045,8 @@
             </section>
         </div>
 
-        {% if searched %}
-        <main class="results-wrapper">
+        <main class="results-wrapper" style="opacity: 1;">
+            {% if searched %}
             <div class="stats-ribbon" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 18px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: none; stroke: var(--primary-light); stroke-width: 2; flex-shrink: 0;"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -1019,6 +1063,7 @@
                     </span>
                 </div>
             </div>
+            {% endif %}
 
             {% if autocorrected_query %}
             <div style="background-color: rgba(99, 102, 241, 0.1); padding: 12px 20px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; border-left: 4px solid var(--primary);">
@@ -1031,22 +1076,15 @@
             </div>
             {% endif %}
 
+            {% if searched %}
             {% if has_ground_truth %}
             <!-- Card Evaluasi Performa Model -->
-            <div class="evaluation-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; box-shadow: var(--shadow-sm); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+            <div id="global-evaluation-section" class="evaluation-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; box-shadow: var(--shadow-sm); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
                     <h3 style="font-size: 1.25rem; color: var(--text-main); display: flex; align-items: center; gap: 8px; margin: 0;">
                         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                         <span id="evaluation-card-title">Evaluasi Performa (Query Aktif)</span>
                     </h3>
-                    <div style="display: inline-flex; background: rgba(11, 15, 25, 0.6); border: 1px solid var(--card-border); border-radius: 8px; padding: 3px;">
-                        <button type="button" id="toggle-eval-single" onclick="setEvaluationMode('single')" style="background: var(--primary); color: white; border: none; padding: 6px 14px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                            Query Aktif
-                        </button>
-                        <button type="button" id="toggle-eval-global" onclick="setEvaluationMode('global')" style="background: transparent; color: var(--text-muted); border: none; padding: 6px 14px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                            Evaluasi Sistem (Multi-Query)
-                        </button>
-                    </div>
                 </div>
                 <div class="training-scroll compact">
                     <table class="epoch-table" style="background: rgba(17, 24, 39, 0.4);">
@@ -1062,10 +1100,10 @@
                         </thead>
                         <tbody>
                             {% for method_key, method_name, m in [
-                                ('cbow', 'CBOW', eval_metrics.get('cbow', {})),
-                                ('ft', 'FastText', eval_metrics.get('ft', {})),
-                                ('sg', 'Skip-Gram', eval_metrics.get('sg', {})),
-                                ('tfidf', 'TF-IDF', eval_metrics.get('tfidf', {}))
+                                ('cbow', 'CBOW', (eval_metrics.get('cbow', {}))),
+                                ('ft', 'FastText', (eval_metrics.get('ft', {}))),
+                                ('sg', 'Skip-Gram', (eval_metrics.get('sg', {}))),
+                                ('tfidf', 'TF-IDF', (eval_metrics.get('tfidf', {})))
                             ] %}
                             <tr>
                                 <td><strong>{{ method_name }}</strong></td>
@@ -1094,26 +1132,40 @@
                 </div>
             </div>
             {% endif %}
+            {% endif %}
 
-            {% if has_ground_truth %}
-            <!-- Card Chart.js Perbandingan F1 Score (Full Width & Stacked) -->
-            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 400px; width: 100%;">
-                <h4 style="font-size: 1.15rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Comparison of F1 Score or Map Scores</h4>
-                <div style="position: relative; height: 320px; width: 100%;">
-                    <canvas id="f1ScoreChart"></canvas>
+            {% if searched and has_ground_truth %}
+            <!-- Charts Row: Mixed Chart & Donut Chart -->
+            <div class="charts-row-eval">
+                <!-- Mixed Chart -->
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 400px; box-shadow: var(--shadow-sm);">
+                    <h4 style="font-size: 1.15rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Comparison of F1 Score or Map Scores</h4>
+                    <div style="position: relative; height: 320px; width: 100%;">
+                        <canvas id="f1ScoreChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Donut Chart -->
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 400px; box-shadow: var(--shadow-sm);">
+                    <h4 style="font-size: 1.15rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Keberhasilan Akurasi Top-1 (Kueri Aktif)</h4>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="top1DonutChart"></canvas>
+                    </div>
                 </div>
             </div>
             {% endif %}
 
             <!-- Line Chart Similarity Distribution (Always Visible, Full Width & Stacked) -->
+            {% if searched %}
             <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 400px; width: 100%;">
                 <h4 style="font-size: 1.15rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Similarity Score Distribution (Cosine Similarity)</h4>
                 <div style="position: relative; height: 320px; width: 100%;">
                     <canvas id="similarityScoreDistributionChart"></canvas>
                 </div>
             </div>
+            {% endif %}
 
-            {% if has_ground_truth %}
+            {% if searched and has_ground_truth %}
             <!-- Grid 4 Small Charts for Metrics (Only when ground truth is set) -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 26px;">
                 <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; height: 180px;">
@@ -1136,6 +1188,7 @@
             {% endif %}
 
             <!-- Document Rankings Side-by-Side (Top 5) -->
+            {% if searched %}
             <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px;">
                 <h3 style="font-size: 1.2rem; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
                     <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--secondary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -1228,8 +1281,10 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <!-- Build Ground Truth Panel -->
+            {% if searched %}
             <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; margin-bottom: 26px;">
                 <h3 style="font-size: 1.25rem; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
                     <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -1254,6 +1309,7 @@
                     </button>
                 </form>
             </div>
+            {% endif %}
 
             <!-- Tombol Toggle Detail Proses -->
             {% if word2vec_sg_training or word2vec_cbow_training or doc_preprocessing %}
@@ -1972,7 +2028,7 @@
                 {% endif %}
                 {% endfor %}
 
-                {% if relevant_count == 0 %}
+                {% if searched and relevant_count == 0 %}
                 <div class="empty-view">
                     <div class="empty-icon">
                         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -1983,7 +2039,6 @@
                 {% endif %}
             </div>
         </main>
-        {% endif %}
 
         <footer class="footer-tag">
             &copy; 2026 Semantika Search Engine &bull; Cosine Similarity Search
@@ -2115,128 +2170,7 @@
             }
         };
 
-        const evalMetricsGlobal = {
-            cbow: {
-                acc: {{ global_eval_metrics.cbow.top1_accuracy if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
-                prec: {{ global_eval_metrics.cbow.precision if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
-                rec: {{ global_eval_metrics.cbow.recall if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
-                f1: {{ global_eval_metrics.cbow.f1_score if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
-                map: {{ global_eval_metrics.cbow.map if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }}
-            },
-            ft: {
-                acc: {{ global_eval_metrics.ft.top1_accuracy if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
-                prec: {{ global_eval_metrics.ft.precision if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
-                rec: {{ global_eval_metrics.ft.recall if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
-                f1: {{ global_eval_metrics.ft.f1_score if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
-                map: {{ global_eval_metrics.ft.map if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }}
-            },
-            sg: {
-                acc: {{ global_eval_metrics.sg.top1_accuracy if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
-                prec: {{ global_eval_metrics.sg.precision if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
-                rec: {{ global_eval_metrics.sg.recall if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
-                f1: {{ global_eval_metrics.sg.f1_score if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
-                map: {{ global_eval_metrics.sg.map if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }}
-            },
-            tfidf: {
-                acc: {{ global_eval_metrics.tfidf.top1_accuracy if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
-                prec: {{ global_eval_metrics.tfidf.precision if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
-                rec: {{ global_eval_metrics.tfidf.recall if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
-                f1: {{ global_eval_metrics.tfidf.f1_score if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
-                map: {{ global_eval_metrics.tfidf.map if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }}
-            }
-        };
-
-        // References for Chart.js instances so they can be updated dynamically
-        let f1ChartInstance = null;
         const miniCharts = {};
-
-        function setEvaluationMode(mode) {
-            const btnSingle = document.getElementById('toggle-eval-single');
-            const btnGlobal = document.getElementById('toggle-eval-global');
-            const titleSpan = document.getElementById('evaluation-card-title');
-            
-            if (mode === 'single') {
-                if (btnSingle) {
-                    btnSingle.style.background = 'var(--primary)';
-                    btnSingle.style.color = 'white';
-                }
-                if (btnGlobal) {
-                    btnGlobal.style.background = 'transparent';
-                    btnGlobal.style.color = 'var(--text-muted)';
-                }
-                if (titleSpan) {
-                    titleSpan.innerText = 'Evaluasi Performa (Query Aktif)';
-                }
-                updateMetricsUI(evalMetricsSingle);
-            } else {
-                if (btnSingle) {
-                    btnSingle.style.background = 'transparent';
-                    btnSingle.style.color = 'var(--text-muted)';
-                }
-                if (btnGlobal) {
-                    btnGlobal.style.background = 'var(--primary)';
-                    btnGlobal.style.color = 'white';
-                }
-                if (titleSpan) {
-                    titleSpan.innerText = 'Evaluasi Performa (Sistem / Multi-Query)';
-                }
-                updateMetricsUI(evalMetricsGlobal);
-            }
-        }
-
-        function updateMetricsUI(metrics) {
-            const methods = ['cbow', 'ft', 'sg', 'tfidf'];
-            const keys = ['acc', 'prec', 'rec', 'f1', 'map'];
-            
-            // Update table cells
-            methods.forEach(m => {
-                keys.forEach(k => {
-                    const el = document.getElementById(`cell-${m}-${k}`);
-                    if (el && metrics[m]) {
-                        el.innerText = Number(metrics[m][k]).toFixed(4);
-                    }
-                });
-            });
-            
-            // Update F1 Score Chart
-            if (f1ChartInstance) {
-                f1ChartInstance.data.datasets[0].data = [
-                    metrics.cbow.f1,
-                    metrics.ft.f1,
-                    metrics.sg.f1,
-                    metrics.tfidf.f1
-                ];
-                f1ChartInstance.data.datasets[1].data = [
-                    metrics.cbow.map,
-                    metrics.ft.map,
-                    metrics.sg.map,
-                    metrics.tfidf.map
-                ];
-                f1ChartInstance.update();
-            }
-            
-            // Update Mini Charts
-            const miniMapping = {
-                'smallChart_acc': 'acc',
-                'smallChart_prec': 'prec',
-                'smallChart_rec': 'rec',
-                'smallChart_f1': 'f1'
-            };
-            
-            Object.keys(miniMapping).forEach(chartId => {
-                const metricKey = miniMapping[chartId];
-                const chartObj = miniCharts[chartId];
-                if (chartObj) {
-                    chartObj.data.datasets[0].data = [
-                        metrics.cbow[metricKey],
-                        metrics.ft[metricKey],
-                        metrics.sg[metricKey],
-                        metrics.tfidf[metricKey]
-                    ];
-                    chartObj.update();
-                }
-            });
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
             toggleImplementationMode();
@@ -2329,6 +2263,62 @@
                                 grid: { drawOnChartArea: false }
                             }
                         }
+                    }
+                });
+            }
+
+            // Chart.js - Donut Chart (Top-1 Success for Single Query)
+            const donutCanvas = document.getElementById('top1DonutChart');
+            if (donutCanvas) {
+                const donutCtx = donutCanvas.getContext('2d');
+                new Chart(donutCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['CBOW', 'FastText', 'Skip-Gram', 'TF-IDF'],
+                        datasets: [{
+                            data: [
+                                evalMetricsSingle.cbow.acc,
+                                evalMetricsSingle.ft.acc,
+                                evalMetricsSingle.sg.acc,
+                                evalMetricsSingle.tfidf.acc
+                            ],
+                            backgroundColor: [
+                                'rgba(251, 191, 36, 0.7)',
+                                'rgba(236, 72, 153, 0.7)',
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(99, 102, 241, 0.7)'
+                            ],
+                            borderColor: [
+                                '#fbbf24',
+                                '#ec4899',
+                                '#34d399',
+                                '#818cf8'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#94a3b8',
+                                    font: { family: 'Outfit', size: 11 }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const val = context.raw;
+                                        const statusText = val > 0 ? "Berhasil (Top-1)" : "Gagal";
+                                        return ` ${context.label}: ${statusText}`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
                     }
                 });
             }
@@ -2470,6 +2460,141 @@
                 evalMetricsSingle.tfidf.f1
             ], borderColors, bgColors);
         });
+
+        function deleteHistory(target, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            let query = "";
+            if (typeof target === 'string') {
+                query = target;
+            } else {
+                query = target.getAttribute('data-query');
+            }
+            if (confirm(`Apakah Anda yakin ingin menghapus "${query}" dari riwayat?`)) {
+                fetch('/delete_history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        window.location.reload();
+                    }
+                });
+            }
+        }
+
+        function clearHistory(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            if (confirm("Apakah Anda yakin ingin menghapus SELURUH riwayat pencarian?")) {
+                fetch('/clear_history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        window.location.reload();
+                    }
+                });
+            }
+        }
+
+        function openHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('historyModal');
+            if (event.target === modal) {
+                closeHistoryModal();
+            }
+        });
     </script>
+
+    <!-- Modal Riwayat & Ground Truth -->
+    <div id="historyModal" class="custom-modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(11, 15, 25, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">
+        <style>
+            @keyframes modalFadeIn {
+                from { opacity: 0; transform: scale(0.97) translateY(-10px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+        </style>
+        <div class="modal-content" style="background: #111827; border: 1px solid var(--card-border); border-radius: 24px; width: 95%; max-width: 1200px; padding: 24px; box-shadow: var(--shadow-lg); position: relative; animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box; display: flex; flex-direction: column; max-height: 90vh;">
+            <button onclick="closeHistoryModal()" style="position: absolute; right: 20px; top: 20px; background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.color='var(--text-main)';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-muted)';">&times;</button>
+            
+            <h3 style="font-size: 1.3rem; color: var(--text-main); margin-bottom: 6px; display: flex; align-items: center; gap: 10px; margin-top: 0;">
+                <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                Riwayat Pencarian & Ground Truth
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px; margin-top: 0;">
+                Daftar semua query benchmark beserta dokumen ground truth dan hasil pencarian teratas (Top-1) dari masing-masing model.
+            </p>
+            
+            <div class="training-scroll" style="flex: 1; overflow-y: auto; border-radius: 12px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 10px;">
+                <table class="epoch-table" style="background: transparent; font-size: 0.82rem; border-collapse: collapse; width: 100%;">
+                    <thead>
+                        <tr style="background: #1f2937; position: sticky; top: 0; z-index: 10;">
+                            <th style="padding: 12px; text-align: center; width: 45px; background: #1f2937;">No</th>
+                            <th style="padding: 12px; width: 320px; background: #1f2937;">Kalimat Query</th>
+                            <th style="padding: 12px; width: 160px; background: #1f2937;">Ground Truth</th>
+                            <th style="padding: 12px; background: #1f2937;">Top-1 TF-IDF</th>
+                            <th style="padding: 12px; background: #1f2937;">Top-1 CBOW</th>
+                            <th style="padding: 12px; background: #1f2937;">Top-1 Skip-Gram</th>
+                            <th style="padding: 12px; background: #1f2937;">Top-1 FastText</th>
+                            <th style="padding: 12px; text-align: center; width: 60px; background: #1f2937;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if global_eval_details %}
+                            {% for row in global_eval_details %}
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.02)';" onmouseout="this.style.background='transparent';">
+                                <td style="padding: 12px; text-align: center; font-weight: 700; color: var(--text-muted);">{{ loop.index }}</td>
+                                <td style="padding: 12px; white-space: normal; line-height: 1.45;">
+                                    <a href="/?query={{ row.query|urlencode }}" style="color: var(--primary-light); text-decoration: none; font-weight: 500;" title="Klik untuk mencari ulang">
+                                        "{{ row.query }}"
+                                    </a>
+                                </td>
+                                <td style="padding: 12px; white-space: normal; font-weight: 600; color: var(--secondary);">{{ row.ground_truth }}</td>
+                                <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_tfidf }}</td>
+                                <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_cbow }}</td>
+                                <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_sg }}</td>
+                                <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_ft }}</td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <button data-query="{{ row.query|escape }}" onclick="deleteHistory(this, event)" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #f87171; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'; this.style.color='#fca5a5';" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'; this.style.color='#f87171';" title="Hapus dari benchmark">
+                                        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada riwayat benchmark global.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -1,7 +1,7 @@
 import os
 import re
 import json
-from flask import Flask, render_template, request, send_from_directory, redirect  # pyre-ignore
+from flask import Flask, render_template, request, send_from_directory, redirect, jsonify  # pyre-ignore
 from main import IRSystem  # pyre-ignore
 
 # Inisialisasi Flask
@@ -114,8 +114,7 @@ def index():
         data['query'] = query
         data['searched'] = True
 
-        # Tambahkan kata kunci ke riwayat
-        ir_system.add_to_query_history(query)
+        # Load riwayat pencarian
         data['query_history'] = ir_system.load_query_history()
 
         # Jalankan pencarian
@@ -169,10 +168,57 @@ def index():
             'ft': calculate_metrics(ft_retrieved, gt_set)
         }
 
-        # Hitung metrik evaluasi global multi-query
-        data['global_eval_metrics'] = ir_system.evaluate_global_benchmark()
-
     return render_template("index.html", **data)
+
+
+@app.route("/evaluation")
+def evaluation():
+    global_eval_metrics = ir_system.evaluate_global_benchmark()
+    global_eval_details = ir_system.get_global_benchmark_details()
+    query_history = ir_system.load_query_history()
+    
+    # Calculate top-1 success count for each model for the Donut Chart
+    gt_file = os.path.join("storage", "ground_truth.json")
+    success_counts = {'tfidf': 0, 'cbow': 0, 'sg': 0, 'ft': 0}
+    
+    if os.path.exists(gt_file):
+        try:
+            with open(gt_file, "r") as f:
+                gt_data = json.load(f)
+        except:
+            gt_data = {}
+            
+        for query, gt_docs in gt_data.items():
+            if not gt_docs:
+                continue
+            # Run search silently to get retrieved rankings
+            res = ir_system.search(query, silent=True)
+            
+            # Helper to check if top-1 is in ground truth
+            def is_correct(results):
+                return results and results[0]['filename'] in gt_docs
+                
+            if is_correct(res.get('results')):
+                success_counts['tfidf'] += 1
+            if is_correct(res.get('cbow_results')):
+                success_counts['cbow'] += 1
+            if is_correct(res.get('sg_results')):
+                success_counts['sg'] += 1
+            if is_correct(res.get('ft_results')):
+                success_counts['ft'] += 1
+                
+    data = {
+        'total_docs': len(ir_system.doc_names),
+        'current_version': ir_system.current_version,
+        'versions': ir_system.list_versions(),
+        'global_eval_metrics': global_eval_metrics,
+        'global_eval_details': global_eval_details,
+        'query_history': query_history,
+        'success_counts': success_counts,
+        'total_queries': len(global_eval_details)
+    }
+    
+    return render_template("evaluation.html", **data)
 
 
 @app.route("/save_ground_truth", methods=["POST"])
@@ -194,6 +240,9 @@ def save_ground_truth():
     os.makedirs("storage", exist_ok=True)
     with open(gt_file, "w") as f:
         json.dump(gt_data, f)
+        
+    if query:
+        ir_system.add_to_query_history(query)
         
     return redirect(f"/?query={query}")
 
@@ -241,6 +290,20 @@ def download_one_hot(version_name):
     if os.path.exists(one_hot_file):
         return send_from_directory(versions_dir, "one_hot_encodings.json", as_attachment=True)
     return "File one-hot encoding untuk versi ini tidak ditemukan.", 404
+
+
+@app.route("/delete_history", methods=["POST"])
+def delete_history():
+    query = request.json.get("query", "").strip()
+    if query:
+        ir_system.remove_from_query_history(query)
+    return jsonify({"status": "success"})
+
+
+@app.route("/clear_history", methods=["POST"])
+def clear_history():
+    ir_system.clear_query_history()
+    return jsonify({"status": "success"})
 
 
 if __name__ == "__main__":

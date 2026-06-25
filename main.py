@@ -447,7 +447,7 @@ class IRSystem:
         self.save_version('Default')
         return True
 
-    def search(self, query: str) -> Dict[str, Any]:
+    def search(self, query: str, silent: bool = False) -> Dict[str, Any]:
         import difflib
         # Kumpulkan daftar kata yang valid dari seluruh dokumen untuk autocorrect
         if not hasattr(self, 'valid_words'):
@@ -507,11 +507,15 @@ class IRSystem:
                 query_w2v_ft_vector, self.w2v_ft_doc_vectors[filename]
             )
             
-            # Buat snippet dinamis berdasarkan kata kunci
-            snippet = self._generate_snippet(self.raw_documents[filename], query_data['clean_tokens'] 
-            if query_data['clean_tokens'] 
-            else query_data['tokens'])
-            highlighted = self._highlight_snippet(snippet, query_data['tokens'], query_data['stemmed_tokens'])
+            # Buat snippet dinamis berdasarkan kata kunci (hanya jika tidak silent)
+            if not silent:
+                snippet = self._generate_snippet(self.raw_documents[filename], query_data['clean_tokens'] 
+                if query_data['clean_tokens'] 
+                else query_data['tokens'])
+                highlighted = self._highlight_snippet(snippet, query_data['tokens'], query_data['stemmed_tokens'])
+            else:
+                snippet = ""
+                highlighted = ""
 
             results.append({
                 'rank': 0,
@@ -545,6 +549,15 @@ class IRSystem:
         ft_ranked = sorted(results, key=lambda x: x['ft_score'], reverse=True)
         for i, r in enumerate(ft_ranked):
             r['ft_rank'] = i + 1
+
+        # Jika pencarian silent (benchmark), kembalikan langsung data peringkat ringkas
+        if silent:
+            return {
+                'results': results,
+                'sg_results': sg_ranked,
+                'cbow_results': cbow_ranked,
+                'ft_results': ft_ranked,
+            }
 
         # Hitung jumlah dokumen relevan (score > 0 atau salah satu model > 0)
         relevant_count = sum(1 for r in results if r['score'] > 0 or r['sg_score'] > 0 or r['cbow_score'] > 0 or r['ft_score'] > 0)
@@ -937,7 +950,7 @@ class IRSystem:
             query_count += 1
             
             # Run search silently
-            res = self.search(query)
+            res = self.search(query, silent=True)
             
             # Retrieve documents
             tfidf_retrieved = [r['filename'] for r in res['results']]
@@ -969,6 +982,55 @@ class IRSystem:
                 
         return averages
 
+    def get_global_benchmark_details(self) -> List[Dict[str, Any]]:
+        gt_file = os.path.join("storage", "ground_truth.json")
+        if not os.path.exists(gt_file):
+            return []
+            
+        try:
+            with open(gt_file, "r") as f:
+                gt_data = json.load(f)
+        except Exception:
+            return []
+            
+        if not gt_data:
+            return []
+            
+        def clean_name(name):
+            return name.replace('_', ' ').replace('.pdf', '') if name != "-" else "-"
+            
+        details = []
+        for query, gt_docs in gt_data.items():
+            if not gt_docs:
+                continue
+                
+            # Jalankan pencarian
+            res = self.search(query, silent=True)
+            
+            # Ambil peringkat 1 untuk masing-masing model
+            top_tfidf = res['results'][0]['filename'] if res.get('results') else "-"
+            score_tfidf = res['results'][0]['score'] if res.get('results') else 0.0
+            
+            top_sg = res['sg_results'][0]['filename'] if res.get('sg_results') else "-"
+            score_sg = res['sg_results'][0]['sg_score'] if res.get('sg_results') else 0.0
+            
+            top_cbow = res['cbow_results'][0]['filename'] if res.get('cbow_results') else "-"
+            score_cbow = res['cbow_results'][0]['cbow_score'] if res.get('cbow_results') else 0.0
+            
+            top_ft = res['ft_results'][0]['filename'] if res.get('ft_results') else "-"
+            score_ft = res['ft_results'][0]['ft_score'] if res.get('ft_results') else 0.0
+            
+            details.append({
+                'query': query,
+                'ground_truth': ", ".join([clean_name(d) for d in gt_docs]),
+                'top_tfidf': f"{clean_name(top_tfidf)} ({score_tfidf:.4f})",
+                'top_sg': f"{clean_name(top_sg)} ({score_sg:.4f})",
+                'top_cbow': f"{clean_name(top_cbow)} ({score_cbow:.4f})",
+                'top_ft': f"{clean_name(top_ft)} ({score_ft:.4f})"
+            })
+            
+        return details
+
     def load_query_history(self) -> List[str]:
         history_file = os.path.join("storage", "query_history.json")
         if os.path.exists(history_file):
@@ -996,6 +1058,31 @@ class IRSystem:
                 json.dump(history, f, indent=4)
         except Exception as e:
             print(f"Error saving query history: {e}")
+
+    def remove_from_query_history(self, query: str):
+        query = query.strip()
+        if not query:
+            return
+        history = self.load_query_history()
+        if query in history:
+            history.remove(query)
+            
+        os.makedirs("storage", exist_ok=True)
+        history_file = os.path.join("storage", "query_history.json")
+        try:
+            with open(history_file, "w") as f:
+                json.dump(history, f, indent=4)
+        except Exception as e:
+            print(f"Error removing from query history: {e}")
+
+    def clear_query_history(self):
+        history_file = os.path.join("storage", "query_history.json")
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, "w") as f:
+                    json.dump([], f, indent=4)
+            except Exception as e:
+                print(f"Error clearing query history: {e}")
 
 
 # Testing langsung jika file ini dijalankan

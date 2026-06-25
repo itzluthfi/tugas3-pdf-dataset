@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantika - Analisis Performa Global</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 28, 45, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.35);
+            --accent: #8b5cf6;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0, transparent 40%), 
+                radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.06) 0, transparent 40%), 
+                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.04) 0, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1300px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 26px;
+        }
+
+        /* Ambient Glow behind title */
+        .ambient-glow {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.04) 50%, rgba(11, 15, 25, 0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .epoch-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .epoch-table th,
+        .epoch-table td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px 14px;
+            text-align: left;
+        }
+
+        .epoch-table th {
+            background: #111827;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .training-scroll {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--card-border);
+        }
+
+        /* Stats Ribbon */
+        .stats-ribbon {
+            background: rgba(22, 28, 45, 0.55);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            padding-right: 15px;
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-main);
+            background: linear-gradient(135deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <div class="page-wrapper">
+        <!-- Top Navbar -->
+        <nav style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; box-sizing: border-box; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(11, 15, 25, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 100;">
+            <a href="/" style="text-decoration: none; font-size: 1.25rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                <span style="background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Semantika</span>
+            </a>
+            <div style="display: flex; gap: 24px;">
+                <a href="/" style="text-decoration: none; color: var(--text-muted); font-size: 0.9rem; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='var(--primary-light)';" onmouseout="this.style.color='var(--text-muted)';">🔍 Cari Dokumen</a>
+                <a href="/evaluation" style="text-decoration: none; color: var(--primary-light); font-size: 0.9rem; font-weight: 600; transition: color 0.2s;">📊 Analisis Global</a>
+            </div>
+        </nav>
+
+        <div class="dashboard-container">
+            <!-- Header Title -->
+            <div style="text-align: center; margin-bottom: 10px;">
+                <h1 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #fff 30%, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Analisis Performa Sistem Global</h1>
+                <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto; font-size: 1rem; font-weight: 300;">Komparasi efisiensi dan akurasi model IR (TF-IDF vs Word2Vec vs FastText) berdasarkan data benchmark sistem secara menyeluruh.</p>
+            </div>
+
+            <!-- Stats Ribbon -->
+            <div class="stats-ribbon">
+                <div class="stat-item">
+                    <span class="stat-label">Total Kueri Benchmark</span>
+                    <span class="stat-value">{{ total_queries }} Kueri</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Dokumen Korpus</span>
+                    <span class="stat-value">{{ total_docs }} PDF</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Versi Model Aktif</span>
+                    <span class="stat-value" style="color: var(--primary-light); background: none; -webkit-text-fill-color: initial;">{{ current_version }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Model Terbaik (MAP)</span>
+                    <span class="stat-value" style="color: var(--secondary); background: none; -webkit-text-fill-color: initial;">FastText</span>
+                </div>
+            </div>
+
+            <!-- Tabel Evaluasi Global Rata-Rata -->
+            <div class="evaluation-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 24px; box-shadow: var(--shadow-sm); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+                <h3 style="font-size: 1.2rem; color: var(--text-main); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                    Tabel Metrik Evaluasi Sistem (Rata-rata Global)
+                </h3>
+                <div class="training-scroll">
+                    <table class="epoch-table" style="background: rgba(17, 24, 39, 0.4);">
+                        <thead>
+                            <tr>
+                                <th>Metode Model</th>
+                                <th>Akurasi Top-1</th>
+                                <th>Presisi (k=5)</th>
+                                <th>Recall (k=5)</th>
+                                <th>F1-Score (k=5)</th>
+                                <th>MAP (Mean Average Precision)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for method_key, method_name, m in [
+                                ('cbow', 'Word2Vec CBOW', (global_eval_metrics.get('cbow', {}))),
+                                ('ft', 'FastText', (global_eval_metrics.get('ft', {}))),
+                                ('sg', 'Word2Vec Skip-Gram', (global_eval_metrics.get('sg', {}))),
+                                ('tfidf', 'TF-IDF Vector Space Model', (global_eval_metrics.get('tfidf', {})))
+                            ] %}
+                            <tr>
+                                <td><strong>{{ method_name }}</strong></td>
+                                <td>{{ "%.4f"|format(m.top1_accuracy) if (m and m.top1_accuracy is not none) else '0.0000' }}</td>
+                                <td>{{ "%.4f"|format(m.precision) if (m and m.precision is not none) else '0.0000' }}</td>
+                                <td>{{ "%.4f"|format(m.recall) if (m and m.recall is not none) else '0.0000' }}</td>
+                                <td>{{ "%.4f"|format(m.f1_score) if (m and m.f1_score is not none) else '0.0000' }}</td>
+                                <td><strong>{{ "%.4f"|format(m.map) if (m and m.map is not none) else '0.0000' }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Charts Row 1: Mixed Chart & Donut Chart -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; flex-wrap: wrap;">
+                <!-- Mixed Chart -->
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 420px; box-shadow: var(--shadow-sm);">
+                    <h4 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Komparasi F1-Score & MAP Secara Global</h4>
+                    <div style="position: relative; height: 340px; width: 100%;">
+                        <canvas id="f1ScoreChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Donut Chart -->
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); height: 420px; box-shadow: var(--shadow-sm);">
+                    <h4 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-main); font-weight: 600; text-align: center;">Distribusi Keberhasilan Akurasi Top-1</h4>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="top1DonutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 2: 4 Mini Charts -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; height: 210px; box-shadow: var(--shadow-sm);">
+                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:10px; text-transform: uppercase;">Top-1 Accuracy</span>
+                    <div style="position: relative; height: 150px;"><canvas id="smallChart_acc"></canvas></div>
+                </div>
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; height: 210px; box-shadow: var(--shadow-sm);">
+                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:10px; text-transform: uppercase;">Precision @ 5</span>
+                    <div style="position: relative; height: 150px;"><canvas id="smallChart_prec"></canvas></div>
+                </div>
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; height: 210px; box-shadow: var(--shadow-sm);">
+                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:10px; text-transform: uppercase;">Recall @ 5</span>
+                    <div style="position: relative; height: 150px;"><canvas id="smallChart_rec"></canvas></div>
+                </div>
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; height: 210px; box-shadow: var(--shadow-sm);">
+                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight:600; display: block; text-align:center; margin-bottom:10px; text-transform: uppercase;">F1 Score @ 5</span>
+                    <div style="position: relative; height: 150px;"><canvas id="smallChart_f1"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Tabel Riwayat Benchmark Global -->
+            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 24px; box-shadow: var(--shadow-sm); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+                <h3 style="font-size: 1.2rem; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 20h9M5 20h.01M19 4H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 11l-4 4-4-4"/></svg>
+                    Rincian Pencarian Benchmark & Tebakan Top-1 Model
+                </h3>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px; margin-top: 0;">
+                    Tabel ini memetakan seluruh kalimat kueri benchmark dengan berkas ground truth yang benar, serta berkas peringkat teratas (Top-1) yang ditebak oleh setiap model (beserta bobot skor kemiripannya).
+                </p>
+                <div class="training-scroll" style="max-height: 480px; overflow-y: auto;">
+                    <table class="epoch-table" style="background: rgba(17, 24, 39, 0.4); font-size: 0.85rem; width: 100%;">
+                        <thead>
+                            <tr style="position: sticky; top: 0; z-index: 10;">
+                                <th style="background: #111827; width: 45px;">No</th>
+                                <th style="background: #111827; width: 340px;">Kalimat Query Benchmark</th>
+                                <th style="background: #111827; width: 160px;">Ground Truth</th>
+                                <th style="background: #111827;">Top-1 TF-IDF</th>
+                                <th style="background: #111827;">Top-1 CBOW</th>
+                                <th style="background: #111827;">Top-1 Skip-Gram</th>
+                                <th style="background: #111827;">Top-1 FastText</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if global_eval_details %}
+                                {% for row in global_eval_details %}
+                                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.02)';" onmouseout="this.style.background='transparent';">
+                                    <td style="text-align: center; font-weight: 700; color: var(--text-muted);">{{ loop.index }}</td>
+                                    <td style="white-space: normal; line-height: 1.45;">
+                                        <a href="/?query={{ row.query|urlencode }}" style="color: var(--primary-light); text-decoration: none; font-weight: 500;" title="Klik untuk melakukan uji coba pencarian ini">
+                                            "{{ row.query }}"
+                                        </a>
+                                    </td>
+                                    <td style="white-space: normal; font-weight: 600; color: var(--secondary);">{{ row.ground_truth }}</td>
+                                    <td style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_tfidf }}</td>
+                                    <td style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_cbow }}</td>
+                                    <td style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_sg }}</td>
+                                    <td style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">{{ row.top_ft }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada kueri ground truth yang tersimpan.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer Navigation -->
+            <div style="display: flex; justify-content: center; margin-top: 10px; margin-bottom: 20px;">
+                <a href="/" style="background: var(--primary); border: none; color: var(--text-main); padding: 12px 30px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: var(--shadow-md); transition: background 0.2s;" onmouseover="this.style.background='var(--primary-dark)';" onmouseout="this.style.background='var(--primary)';">
+                    <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    Kembali ke Halaman Pencarian
+                </a>
+            </div>
+        </div>
+
+        <footer class="footer-tag" style="text-align: center; font-size: 0.85rem; color: var(--text-muted); padding: 30px; margin-top: auto; width: 100%;">
+            &copy; 2026 Semantika Search Engine &bull; Analisis Performa Sistem
+        </footer>
+    </div>
+
+    <script>
+        // Data evaluasi global di-inject oleh Jinja2
+        const globalMetrics = {
+            cbow: {
+                acc: {{ global_eval_metrics.cbow.top1_accuracy if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                prec: {{ global_eval_metrics.cbow.precision if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                rec: {{ global_eval_metrics.cbow.recall if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                f1: {{ global_eval_metrics.cbow.f1_score if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }},
+                map: {{ global_eval_metrics.cbow.map if (global_eval_metrics and global_eval_metrics.cbow) else 0.0 }}
+            },
+            ft: {
+                acc: {{ global_eval_metrics.ft.top1_accuracy if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                prec: {{ global_eval_metrics.ft.precision if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                rec: {{ global_eval_metrics.ft.recall if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                f1: {{ global_eval_metrics.ft.f1_score if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }},
+                map: {{ global_eval_metrics.ft.map if (global_eval_metrics and global_eval_metrics.ft) else 0.0 }}
+            },
+            sg: {
+                acc: {{ global_eval_metrics.sg.top1_accuracy if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                prec: {{ global_eval_metrics.sg.precision if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                rec: {{ global_eval_metrics.sg.recall if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                f1: {{ global_eval_metrics.sg.f1_score if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }},
+                map: {{ global_eval_metrics.sg.map if (global_eval_metrics and global_eval_metrics.sg) else 0.0 }}
+            },
+            tfidf: {
+                acc: {{ global_eval_metrics.tfidf.top1_accuracy if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                prec: {{ global_eval_metrics.tfidf.precision if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                rec: {{ global_eval_metrics.tfidf.recall if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                f1: {{ global_eval_metrics.tfidf.f1_score if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }},
+                map: {{ global_eval_metrics.tfidf.map if (global_eval_metrics and global_eval_metrics.tfidf) else 0.0 }}
+            }
+        };
+
+        const successCounts = {
+            tfidf: {{ success_counts.tfidf if success_counts else 0 }},
+            cbow: {{ success_counts.cbow if success_counts else 0 }},
+            sg: {{ success_counts.sg if success_counts else 0 }},
+            ft: {{ success_counts.ft if success_counts else 0 }}
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Chart 1: Mixed Chart (F1 & MAP)
+            const f1Canvas = document.getElementById('f1ScoreChart');
+            if (f1Canvas) {
+                const f1Ctx = f1Canvas.getContext('2d');
+                new Chart(f1Ctx, {
+                    data: {
+                        labels: ['CBOW', 'FastText', 'Skip-Gram', 'TF-IDF'],
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: 'F1-Score (Global)',
+                                data: [
+                                    globalMetrics.cbow.f1,
+                                    globalMetrics.ft.f1,
+                                    globalMetrics.sg.f1,
+                                    globalMetrics.tfidf.f1
+                                ],
+                                backgroundColor: [
+                                    'rgba(251, 191, 36, 0.6)',
+                                    'rgba(236, 72, 153, 0.6)',
+                                    'rgba(16, 185, 129, 0.6)',
+                                    'rgba(99, 102, 241, 0.6)'
+                                ],
+                                borderColor: [
+                                    '#fbbf24',
+                                    '#ec4899',
+                                    '#34d399',
+                                    '#818cf8'
+                                ],
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            },
+                            {
+                                type: 'line',
+                                label: 'MAP (Global)',
+                                data: [
+                                    globalMetrics.cbow.map,
+                                    globalMetrics.ft.map,
+                                    globalMetrics.sg.map,
+                                    globalMetrics.tfidf.map
+                                ],
+                                borderColor: '#f43f5e',
+                                backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.15,
+                                pointBackgroundColor: '#f43f5e',
+                                pointBorderColor: '#fff',
+                                pointHoverRadius: 7,
+                                pointRadius: 5,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: '#94a3b8',
+                                    font: { family: 'Outfit', size: 12 }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                max: 1.0,
+                                min: 0.0,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                max: 1.0,
+                                min: 0.0,
+                                grid: { drawOnChartArea: false },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#94a3b8', font: { weight: 'bold' } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart 2: Donut Chart (Top-1 Success Ratio)
+            const donutCanvas = document.getElementById('top1DonutChart');
+            if (donutCanvas) {
+                const donutCtx = donutCanvas.getContext('2d');
+                new Chart(donutCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['CBOW', 'FastText', 'Skip-Gram', 'TF-IDF'],
+                        datasets: [{
+                            data: [successCounts.cbow, successCounts.ft, successCounts.sg, successCounts.tfidf],
+                            backgroundColor: [
+                                'rgba(251, 191, 36, 0.7)',
+                                'rgba(236, 72, 153, 0.7)',
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(99, 102, 241, 0.7)'
+                            ],
+                            borderColor: [
+                                '#fbbf24',
+                                '#ec4899',
+                                '#34d399',
+                                '#818cf8'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#94a3b8',
+                                    font: { family: 'Outfit', size: 11 }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const val = context.raw;
+                                        const total = {{ total_queries if total_queries else 15 }};
+                                        const pct = ((val / total) * 100).toFixed(1);
+                                        return ` ${context.label}: ${val} kueri (${pct}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }
+
+            // Chart 3-6: Mini Charts for individual metrics
+            const borderColors = ['#fbbf24', '#ec4899', '#34d399', '#818cf8'];
+            const bgColors = ['rgba(251, 191, 36, 0.6)', 'rgba(236, 72, 153, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(99, 102, 241, 0.6)'];
+
+            function createMiniChart(elementId, labelText, dataArr) {
+                const canvas = document.getElementById(elementId);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['CBOW', 'FT', 'SG', 'TF'],
+                        datasets: [{
+                            label: labelText,
+                            data: dataArr,
+                            backgroundColor: bgColors,
+                            borderColor: borderColors,
+                            borderWidth: 1.5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                max: 1.0,
+                                min: 0.0,
+                                grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                                ticks: { color: '#64748b', font: { size: 9 } }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { size: 9, weight: 'bold' } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            createMiniChart('smallChart_acc', 'Accuracy', [
+                globalMetrics.cbow.acc,
+                globalMetrics.ft.acc,
+                globalMetrics.sg.acc,
+                globalMetrics.tfidf.acc
+            ]);
+            createMiniChart('smallChart_prec', 'Precision', [
+                globalMetrics.cbow.prec,
+                globalMetrics.ft.prec,
+                globalMetrics.sg.prec,
+                globalMetrics.tfidf.prec
+            ]);
+            createMiniChart('smallChart_rec', 'Recall', [
+                globalMetrics.cbow.rec,
+                globalMetrics.ft.rec,
+                globalMetrics.sg.rec,
+                globalMetrics.tfidf.rec
+            ]);
+            createMiniChart('smallChart_f1', 'F1 Score', [
+                globalMetrics.cbow.f1,
+                globalMetrics.ft.f1,
+                globalMetrics.sg.f1,
+                globalMetrics.tfidf.f1
+            ]);
+        });
+    </script>
+</body>
+</html>
