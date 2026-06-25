@@ -2512,6 +2512,70 @@
             if (modal) {
                 modal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
+
+                const tbody = document.getElementById('historyModalTableBody');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                                <div style="display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s ease-in-out infinite; margin-bottom: 8px;"></div>
+                                <div style="font-size: 0.9rem;">Memuat data riwayat & tebakan model...</div>
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                fetch('/api/benchmark_details')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (tbody) {
+                            if (data && data.length > 0) {
+                                let html = '';
+                                data.forEach((row, index) => {
+                                    const escapedQueryAttr = row.query.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                                    const encodedQuery = encodeURIComponent(row.query);
+                                    
+                                    html += `
+                                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.02)';" onmouseout="this.style.background='transparent';">
+                                            <td style="padding: 12px; text-align: center; font-weight: 700; color: var(--text-muted);">${index + 1}</td>
+                                            <td style="padding: 12px; white-space: normal; line-height: 1.45;">
+                                                <a href="/?query=${encodedQuery}" style="color: var(--primary-light); text-decoration: none; font-weight: 500;" title="Klik untuk mencari ulang">
+                                                    "${row.query}"
+                                                </a>
+                                            </td>
+                                            <td style="padding: 12px; white-space: normal; font-weight: 600; color: var(--secondary);">${row.ground_truth}</td>
+                                            <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">${row.top_tfidf}</td>
+                                            <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">${row.top_cbow}</td>
+                                            <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">${row.top_sg}</td>
+                                            <td style="padding: 12px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.3;">${row.top_ft}</td>
+                                            <td style="padding: 12px; text-align: center;">
+                                                <button data-query="${escapedQueryAttr}" onclick="deleteHistory(this, event)" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #f87171; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'; this.style.color='#fca5a5';" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'; this.style.color='#f87171';" title="Hapus dari benchmark">
+                                                    <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                });
+                                tbody.innerHTML = html;
+                            } else {
+                                tbody.innerHTML = `
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada riwayat benchmark global.</td>
+                                    </tr>
+                                `;
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error fetching benchmark details:', err);
+                        if (tbody) {
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="8" style="text-align: center; color: #ef4444; padding: 30px;">Gagal memuat data benchmark. Silakan coba lagi.</td>
+                                </tr>
+                            `;
+                        }
+                    });
             }
         }
 
@@ -2537,6 +2601,9 @@
             @keyframes modalFadeIn {
                 from { opacity: 0; transform: scale(0.97) translateY(-10px); }
                 to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
             }
         </style>
         <div class="modal-content" style="background: #111827; border: 1px solid var(--card-border); border-radius: 24px; width: 95%; max-width: 1200px; padding: 24px; box-shadow: var(--shadow-lg); position: relative; animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box; display: flex; flex-direction: column; max-height: 90vh;">
@@ -2564,7 +2631,7 @@
                             <th style="padding: 12px; text-align: center; width: 60px; background: #1f2937;">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="historyModalTableBody">
                         {% if global_eval_details %}
                             {% for row in global_eval_details %}
                             <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.02)';" onmouseout="this.style.background='transparent';">

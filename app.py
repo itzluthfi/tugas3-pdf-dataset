@@ -292,6 +292,12 @@ def download_one_hot(version_name):
     return "File one-hot encoding untuk versi ini tidak ditemukan.", 404
 
 
+@app.route("/api/benchmark_details")
+def api_benchmark_details():
+    global_eval_details = ir_system.get_global_benchmark_details()
+    return jsonify(global_eval_details)
+
+
 @app.route("/delete_history", methods=["POST"])
 def delete_history():
     query = request.json.get("query", "").strip()
